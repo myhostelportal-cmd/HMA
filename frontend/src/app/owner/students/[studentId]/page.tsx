@@ -582,12 +582,15 @@ export default function StudentLedgerPage() {
                     })}
                   </div>
                   <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6 md:gap-4">
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="flex items-center gap-4 w-full sm:w-auto justify-center sm:justify-start">
                       <div className="w-12 h-12 md:w-14 md:h-14 bg-indigo-50 text-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm shrink-0"><ShieldCheck size={28} /></div>
-                      <div><p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">SECURITY DEPOSIT</p><p className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter">₹{parseFloat(student.security_deposit as any || "0").toLocaleString()}</p></div>
+                      <div>
+                        <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">SECURITY DEPOSIT</p>
+                        <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tighter">₹{parseFloat(student.security_deposit as any || "0").toLocaleString()}</p>
+                      </div>
                     </div>
                     {student.payment_model === '2 + 1 System' && (
-                      <div className="sm:ml-4 border-l-0 sm:border-l border-slate-100 pl-0 sm:pl-8 w-full sm:w-auto">
+                      <div className="sm:ml-4 border-l-0 sm:border-l border-slate-100 pl-0 sm:pl-8 w-full sm:w-auto text-center sm:text-left">
                         <p className="text-[8px] md:text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">AVAILABLE SECURITY</p>
                         <p className="text-xl md:text-2xl font-black text-amber-600 tracking-tighter">₹{getAvailableSecurity().toLocaleString()}</p>
                       </div>
@@ -670,6 +673,14 @@ export default function StudentLedgerPage() {
                                 <motion.button 
                                   whileHover={{ scale: 1.1, rotate: -5 }} 
                                   whileTap={{ scale: 0.9 }} 
+                                  animate={{ 
+                                    boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.5)", "0px 0px 0px rgba(16, 185, 129, 0)"] 
+                                  }}
+                                  transition={{ 
+                                    boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                                    scale: { duration: 0.2 },
+                                    rotate: { duration: 0.2 }
+                                  }}
                                   onClick={() => { 
                                     const receiptFee: FeeRecord = { ...fee, paid_amount: singlePayment?.amount || fee.paid_amount, payment_date: singlePayment?.actual_payment_date || fee.payment_date, payment_method: singlePayment?.payment_method || fee.payment_method, transaction_id: singlePayment?.transaction_id || fee.transaction_id, receipt_id: singlePayment?.receipt_id || fee.receipt_id, status: 'paid', remarks: singlePayment?.remarks || fee.remarks }; 
                                     shareOnWhatsApp(receiptFee); 
@@ -677,7 +688,9 @@ export default function StudentLedgerPage() {
                                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all"
                                   title="Share on WhatsApp"
                                 >
-                                  <MessageSquare size={16} />
+                                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.122.554 4.197 1.607 6.037L0 24l6.105-1.602a11.834 11.834 0 005.937 1.598h.005c6.637 0 12.032-5.395 12.035-12.03a11.824 11.824 0 00-3.417-8.436z"/>
+                                  </svg>
                                 </motion.button>
                               </div>
                             ) : (
@@ -718,6 +731,14 @@ export default function StudentLedgerPage() {
                                   <motion.button 
                                     whileHover={{ scale: 1.1, rotate: -5 }} 
                                     whileTap={{ scale: 0.9 }} 
+                                    animate={{ 
+                                      boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.5)", "0px 0px 0px rgba(16, 185, 129, 0)"] 
+                                    }}
+                                    transition={{ 
+                                      boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                                      scale: { duration: 0.2 },
+                                      rotate: { duration: 0.2 }
+                                    }}
                                     onClick={() => { 
                                       const receiptFee: FeeRecord = { ...fee, paid_amount: payment.amount, payment_date: payment.actual_payment_date, payment_method: payment.payment_method, transaction_id: payment.transaction_id, receipt_id: payment.receipt_id, status: 'paid', remarks: payment.remarks }; 
                                       shareOnWhatsApp(receiptFee); 
@@ -725,7 +746,9 @@ export default function StudentLedgerPage() {
                                     className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all"
                                     title="Share on WhatsApp"
                                   >
-                                    <MessageSquare size={16} />
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.122.554 4.197 1.607 6.037L0 24l6.105-1.602a11.834 11.834 0 005.937 1.598h.005c6.637 0 12.032-5.395 12.035-12.03a11.824 11.824 0 00-3.417-8.436z"/>
+                                    </svg>
                                   </motion.button>
                                 </div>
                               </td>

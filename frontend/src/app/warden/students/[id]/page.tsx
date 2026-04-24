@@ -658,14 +658,31 @@ export default function StudentProfilePage() {
       ? `\n\n*Download Official PDF Receipt:*\n${window.location.origin}/public/receipt/${publicToken}`
       : "";
     
+    const pDate = fee.payment_date ? new Date(fee.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+    const statusText = (fee.status || 'pending').toUpperCase();
+    const displayStatus = statusText === 'PAID' ? 'PAID' : statusText === 'PARTIAL' ? 'PARTIAL PAID' : statusText;
+
     const message = `*FEE PAYMENT RECEIPT - ${hostelName}*\n\n` +
       `Hello *${student.name}*,\n\n` +
       `Your payment has been successfully recorded.\n\n` +
-      `*Details:*\n` +
+      `*STUDENT INFORMATION*\n` +
+      `• *Room Number:* ${student.room_number || '—'}\n` +
+      `• *Contact:* ${student.phone || '—'}\n` +
+      `• *Joining Date:* ${new Date(student.joining_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n` +
+      `*RECEIPT INFORMATION*\n` +
+      `• *Receipt ID:* ${receiptId}\n` +
+      `• *Payment Date:* ${pDate}\n` +
       `• *Installment:* ${installment}\n` +
       `• *Amount:* ₹${amount}\n` +
-      `• *Receipt ID:* ${receiptId}\n` +
-      `• *Transaction Ref:* ${transactionRef}${publicLink}\n\n` +
+      `• *Payment Method:* ${fee.payment_method || '—'}\n` +
+      `• *Transaction ID:* ${transactionRef}\n` +
+      `• *Status:* ${displayStatus}\n\n` +
+      `*PAYMENT SUMMARY*\n` +
+      `• *Total Package:* ₹${parseFloat(student.total_session_fees as any || "0").toLocaleString('en-IN')}\n` +
+      `• *Security:* ₹${parseFloat(student.security_deposit as any || "0").toLocaleString('en-IN')}\n` +
+      `• *Total Paid:* ₹${feeStats.totalPaid.toLocaleString('en-IN')}\n` +
+      `• *Outstanding:* ₹${feeStats.totalDue.toLocaleString('en-IN')}\n` +
+      `• *Overcredited:* ₹${feeStats.overcreditedAmount.toLocaleString('en-IN')}${publicLink}\n\n` +
       `_Thank you for your payment!_`;
 
     const encodedMsg = encodeURIComponent(message);
@@ -1490,6 +1507,14 @@ export default function StudentProfilePage() {
                                 <motion.button 
                                   whileHover={{ scale: 1.1, rotate: -5 }}
                                   whileTap={{ scale: 0.9 }}
+                                  animate={{ 
+                                    boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.5)", "0px 0px 0px rgba(16, 185, 129, 0)"] 
+                                  }}
+                                  transition={{ 
+                                    boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                                    scale: { duration: 0.2 },
+                                    rotate: { duration: 0.2 }
+                                  }}
                                   onClick={() => {
                                     const receiptFee: FeeRecord = { 
                                       ...fee, 
@@ -1506,7 +1531,9 @@ export default function StudentProfilePage() {
                                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all"
                                   title="Share on WhatsApp"
                                 >
-                                  <MessageSquare size={16} />
+                                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.122.554 4.197 1.607 6.037L0 24l6.105-1.602a11.834 11.834 0 005.937 1.598h.005c6.637 0 12.032-5.395 12.035-12.03a11.824 11.824 0 00-3.417-8.436z"/>
+                                  </svg>
                                 </motion.button>
                               </div>
                             ) : (
@@ -1580,16 +1607,26 @@ export default function StudentProfilePage() {
                                     <Download size={16} />
                                   </motion.button>
                                   <motion.button 
-                                    whileHover={{ scale: 1.1, rotate: 5 }}
+                                    whileHover={{ scale: 1.1, rotate: -5 }}
                                     whileTap={{ scale: 0.9 }}
+                                    animate={{ 
+                                      boxShadow: ["0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 12px rgba(16, 185, 129, 0.5)", "0px 0px 0px rgba(16, 185, 129, 0)"] 
+                                    }}
+                                    transition={{ 
+                                      boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                                      scale: { duration: 0.2 },
+                                      rotate: { duration: 0.2 }
+                                    }}
                                     onClick={() => {
                                       const receiptFee: FeeRecord = { ...fee, paid_amount: payment.amount, payment_date: payment.actual_payment_date, payment_method: payment.payment_method, transaction_id: payment.transaction_id, receipt_id: payment.receipt_id, status: 'paid', remarks: payment.remarks };
                                       shareOnWhatsApp(receiptFee);
                                     }}
-                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all"
                                     title="Share on WhatsApp"
                                   >
-                                    <MessageSquare size={16} />
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.122.554 4.197 1.607 6.037L0 24l6.105-1.602a11.834 11.834 0 005.937 1.598h.005c6.637 0 12.032-5.395 12.035-12.03a11.824 11.824 0 00-3.417-8.436z"/>
+                                    </svg>
                                   </motion.button>
                                 </div>
                               </td>

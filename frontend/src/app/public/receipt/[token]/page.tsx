@@ -36,7 +36,8 @@ export default function PublicReceiptPage() {
     const student: StudentProfile = {
       student_id: data.student_id || 0, 
       name: data.student_name,
-      phone: "N/A",
+      phone: data.phone || "N/A",
+      room_number: data.room_number || "—",
       hostel_name: data.hostel_name,
       hostel_address: data.hostel_address || "Professional Hostel Solutions", 
       hostel_contact: data.hostel_contact || "N/A",
