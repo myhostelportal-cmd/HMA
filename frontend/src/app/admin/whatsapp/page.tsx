@@ -14,7 +14,9 @@ import {
   ShieldCheck,
   Smartphone,
   ScanLine,
-  Info
+  Info,
+  Menu,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
