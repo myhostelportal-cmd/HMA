@@ -245,7 +245,11 @@ const WardenAttendance = () => {
                           e.preventDefault();
                           e.stopPropagation();
                           if (dateInputRef.current) {
-                            dateInputRef.current.showPicker?.() || dateInputRef.current.click();
+                            if ('showPicker' in dateInputRef.current) {
+                              dateInputRef.current.showPicker();
+                            } else {
+                              dateInputRef.current.click();
+                            }
                           }
                         }}
                         className="flex items-center gap-4 px-7 py-4 bg-white border-2 border-slate-200 hover:border-indigo-400 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-blue-50 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 cursor-pointer active:scale-[0.98] group"
