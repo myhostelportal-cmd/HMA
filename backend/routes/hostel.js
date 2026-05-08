@@ -5,6 +5,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/logger');
 const nodemailer = require('nodemailer');
+const { getWhatsAppStatus } = require('../services/whatsapp');
 
 // Email Transporter (Reuse logic from auth.js if needed, but defining here for stability)
 const transporter = nodemailer.createTransport({
@@ -96,6 +97,17 @@ router.get('/:hostelId/dashboard-summary', authenticateToken, authorizeRoles('wa
 
   } catch (err) {
     console.error('Consolidated dashboard error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Warden: Get WhatsApp Status
+router.get('/whatsapp/status', authenticateToken, authorizeRoles('warden', 'admin'), (req, res) => {
+  try {
+    const status = getWhatsAppStatus();
+    res.json(status);
+  } catch (err) {
+    console.error('WhatsApp status error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

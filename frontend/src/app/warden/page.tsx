@@ -5,6 +5,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Card from '@/components/ui/Card';
 import api from '@/lib/api';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
   GraduationCap, 
@@ -24,7 +25,8 @@ import {
   AlertCircle,
   Clock,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +37,8 @@ const WardenDashboard = () => {
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [sendingReminders, setSendingReminders] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null);
+  const [whatsappStatus, setWhatsappStatus] = useState<{ isReady: boolean; qr: string | null }>({ isReady: false, qr: null });
+  const [showQrModal, setShowQrModal] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -44,7 +48,29 @@ const WardenDashboard = () => {
       fetchWardenData(parsedUser.id);
       fetchRecentLogs(parsedUser.id);
     }
+
+    // Initial fetch
+    fetchWhatsAppStatus();
+
+    // Poll WhatsApp status every 10 seconds
+    const statusInterval = setInterval(() => {
+      fetchWhatsAppStatus();
+    }, 10000);
+
+    return () => clearInterval(statusInterval);
   }, []);
+
+  const fetchWhatsAppStatus = async () => {
+    try {
+      const res = await api.get('/hostels/whatsapp/status');
+      setWhatsappStatus(res.data);
+      if (res.data.isReady) {
+        setShowQrModal(false);
+      }
+    } catch (err) {
+      console.error('Error fetching WhatsApp status:', err);
+    }
+  };
 
   const fetchRecentLogs = async (wardenId: number) => {
     try {
@@ -242,29 +268,106 @@ const WardenDashboard = () => {
                   </h2>
                   <p className="text-slate-400 text-sm font-medium mt-1">Here is your operational overview for today.</p>
                 </div>
-                <button
-                  onClick={sendReminders}
-                  disabled={sendingReminders}
-                  className={cn(
-                    "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
-                    sendingReminders
-                      ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-600/30"
+                <div className="flex flex-wrap items-center gap-4">
+                  {!whatsappStatus.isReady && (
+                    <button
+                      onClick={() => setShowQrModal(true)}
+                      className="flex items-center gap-2 px-6 py-3 bg-amber-50 text-amber-700 rounded-2xl border border-amber-100 font-bold hover:bg-amber-100 transition-all animate-pulse text-xs uppercase tracking-widest"
+                    >
+                      <div className="w-2 h-2 bg-amber-500 rounded-full" />
+                      Connect WhatsApp
+                    </button>
                   )}
-                >
-                  {sendingReminders ? (
-                    <>
-                      <Loader2 className="animate-spin" size={16} />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Bell size={16} />
-                      Send Reminder
-                    </>
+                  {whatsappStatus.isReady && (
+                    <div className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-2xl border border-emerald-100 font-bold text-xs uppercase tracking-widest">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                      WhatsApp Active
+                    </div>
                   )}
-                </button>
+                  <button 
+                    onClick={sendReminders}
+                    disabled={sendingReminders || !whatsappStatus.isReady}
+                    className={cn(
+                      "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
+                      (sendingReminders || !whatsappStatus.isReady)
+                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                        : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-600/30"
+                    )}
+                  >
+                    {sendingReminders ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare size={16} />
+                        Send Reminders
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
+
+              {/* WhatsApp QR Modal */}
+              <AnimatePresence>
+                {showQrModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+                    >
+                      <button 
+                        onClick={() => setShowQrModal(false)}
+                        className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+                      >
+                        <X size={24} />
+                      </button>
+
+                      <div className="text-center space-y-6">
+                        <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
+                          <MessageSquare size={32} />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <h2 className="text-2xl font-black text-slate-900">Connect WhatsApp</h2>
+                          <p className="text-slate-500 font-medium text-sm">Scan the QR code below with your WhatsApp Business account to enable automatic reminders.</p>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 aspect-square flex items-center justify-center relative group">
+                          {whatsappStatus.qr ? (
+                            <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(whatsappStatus.qr)}&size=300x300`}
+                              alt="WhatsApp QR Code"
+                              className="w-full h-full rounded-xl shadow-lg"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center gap-3 text-slate-400">
+                              <Loader2 className="animate-spin" size={48} />
+                              <p className="font-bold text-xs uppercase tracking-widest">Generating QR...</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-4 pt-2">
+                          <div className="flex items-start gap-3 text-left bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                            <div className="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">1</div>
+                            <p className="text-sm font-medium text-slate-600">Open WhatsApp on your phone</p>
+                          </div>
+                          <div className="flex items-start gap-3 text-left bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                            <div className="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">2</div>
+                            <p className="text-sm font-medium text-slate-600">Go to Settings → Linked Devices → Link a Device</p>
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">The QR code will refresh automatically</p>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
 
               {hostels.map((hostel) => (
                 <div key={hostel.hostel_id} className="space-y-12">
