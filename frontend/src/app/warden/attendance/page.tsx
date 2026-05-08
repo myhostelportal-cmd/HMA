@@ -245,10 +245,11 @@ const WardenAttendance = () => {
                           e.preventDefault();
                           e.stopPropagation();
                           if (dateInputRef.current) {
-                            if ('showPicker' in dateInputRef.current) {
-                              dateInputRef.current.showPicker();
+                            const input = dateInputRef.current as any;
+                            if (input.showPicker) {
+                              input.showPicker();
                             } else {
-                              dateInputRef.current.click();
+                              input.click();
                             }
                           }
                         }}
