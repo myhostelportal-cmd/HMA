@@ -39,6 +39,7 @@ const menuItems = {
     { label: 'Owners', icon: UserCog, href: '/admin/owners' },
     { label: 'Wardens', icon: Users, href: '/admin/wardens' },
     { label: 'All Students', icon: GraduationCap, href: '/admin/students' },
+    { label: 'WhatsApp', icon: MessageSquare, href: '/admin/whatsapp' },
     { label: 'Fee Reports', icon: BarChart3, href: '/admin/reports/fees' },
     { label: 'System Logs', icon: Receipt, href: '/admin/logs' },
   ],
