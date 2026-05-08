@@ -5,7 +5,6 @@ const cron = require('node-cron');
 
 let whatsappClient = null;
 let isReady = false;
-let latestQr = null;
 
 const REMINDER_DAYS = [5, 4, 3, 2, 1, 0, -1, -2];
 
@@ -34,7 +33,6 @@ function initWhatsApp() {
 
   whatsappClient.on('qr', (qr) => {
     console.log('--- WHATSAPP QR CODE GENERATED ---');
-    latestQr = qr;
     console.log('Scan this QR code with your WhatsApp Business account to connect:');
     qrcode.generate(qr, { small: true });
   });
@@ -42,58 +40,25 @@ function initWhatsApp() {
   whatsappClient.on('ready', () => {
     console.log('--- WHATSAPP CLIENT IS READY ---');
     isReady = true;
-    latestQr = null;
     startCronJob();
   });
 
   whatsappClient.on('authenticated', () => {
     console.log('--- WHATSAPP AUTHENTICATED ---');
-    latestQr = null;
   });
 
   whatsappClient.on('auth_failure', (msg) => {
     console.error('--- WHATSAPP AUTHENTICATION FAILED ---', msg);
-    latestQr = null;
-    isReady = false;
   });
 
   whatsappClient.on('disconnected', (reason) => {
     console.log('--- WHATSAPP DISCONNECTED ---', reason);
     isReady = false;
-    latestQr = null;
-    // Attempt to re-initialize after a short delay if it was a server-side disconnect
-    setTimeout(() => initWhatsApp(), 5000);
   });
 
   whatsappClient.initialize().catch(err => {
     console.error('--- WHATSAPP INITIALIZATION ERROR ---', err);
   });
-}
-
-function getWhatsAppStatus() {
-  return {
-    isReady,
-    qr: latestQr,
-    info: isReady ? whatsappClient.info : null
-  };
-}
-
-async function disconnectWhatsApp() {
-  if (whatsappClient) {
-    try {
-      await whatsappClient.logout();
-      await whatsappClient.destroy();
-      isReady = false;
-      latestQr = null;
-      // Re-initialize to generate a new QR
-      initWhatsApp();
-      return true;
-    } catch (err) {
-      console.error('Error disconnecting WhatsApp:', err);
-      return false;
-    }
-  }
-  return false;
 }
 
 async function sendWhatsAppMessage(phoneNumber, message) {
@@ -350,7 +315,5 @@ module.exports = {
   checkAndSendReminders,
   testReminders,
   sendPriorityDueReminders,
-  isReady: () => isReady,
-  getWhatsAppStatus,
-  disconnectWhatsApp
+  isReady: () => isReady
 };

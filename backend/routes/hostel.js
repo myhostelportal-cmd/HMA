@@ -5,7 +5,6 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/logger');
 const nodemailer = require('nodemailer');
-const { getWhatsAppStatus, disconnectWhatsApp } = require('../services/whatsapp');
 
 // Email Transporter (Reuse logic from auth.js if needed, but defining here for stability)
 const transporter = nodemailer.createTransport({
@@ -97,32 +96,6 @@ router.get('/:hostelId/dashboard-summary', authenticateToken, authorizeRoles('wa
 
   } catch (err) {
     console.error('Consolidated dashboard error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Admin/Warden: Get WhatsApp Status
-router.get('/whatsapp/status', authenticateToken, authorizeRoles('admin', 'warden'), (req, res) => {
-  try {
-    const status = getWhatsAppStatus();
-    res.json(status);
-  } catch (err) {
-    console.error('WhatsApp status error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Admin: Disconnect WhatsApp
-router.post('/whatsapp/disconnect', authenticateToken, authorizeRoles('admin'), async (req, res) => {
-  try {
-    const success = await disconnectWhatsApp();
-    if (success) {
-      res.json({ message: 'WhatsApp disconnected successfully' });
-    } else {
-      res.status(500).json({ error: 'Failed to disconnect WhatsApp' });
-    }
-  } catch (err) {
-    console.error('WhatsApp disconnect error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
