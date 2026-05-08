@@ -42,7 +42,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { downloadReceipt as generateReceipt, StudentProfile, FeeRecord, FeeStats } from "@/utils/receiptGenerator";
+import { downloadReceipt as generateReceipt } from "@/utils/receiptGenerator";
 
 interface StudentProfile {
   student_id: number;
