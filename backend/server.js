@@ -142,6 +142,33 @@ app.post('/api/warden/send-reminders', authenticateToken, authorizeRoles('warden
   }
 });
 
+// WhatsApp QR Code Status Endpoint
+app.get('/api/whatsapp-qr', async (req, res) => {
+  try {
+    const path = require('path');
+    const fs = require('fs');
+    const publicDir = path.join(__dirname, 'public');
+    const qrPath = path.join(publicDir, 'qr.png');
+    
+    if (fs.existsSync(qrPath)) {
+      res.json({ 
+        status: 'qr_ready', 
+        qr_url: `${req.protocol}://${req.get('host')}/public/qr.png` 
+      });
+    } else {
+      const { isReady } = require('./services/whatsapp');
+      if (isReady()) {
+        res.json({ status: 'connected' });
+      } else {
+        res.json({ status: 'initializing' });
+      }
+    }
+  } catch (err) {
+    console.error('--- QR STATUS CHECK FAILED ---', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Test WhatsApp Reminders Endpoint
 app.get('/api/test-reminders', async (req, res) => {
   try {
