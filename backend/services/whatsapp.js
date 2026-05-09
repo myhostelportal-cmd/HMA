@@ -46,6 +46,7 @@ function initWhatsApp(forceReset = false) {
   }
 
   console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
+  console.log('--- PUPPETEER EXECUTABLE PATH:', process.env.PUPPETEER_EXECUTABLE_PATH);
 
   whatsappClient = new Client({
     authStrategy: new LocalAuth({
@@ -53,7 +54,7 @@ function initWhatsApp(forceReset = false) {
     }),
     puppeteer: {
       headless: true,
-      executablePath: process.env.CHROME_PATH || null,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox',
