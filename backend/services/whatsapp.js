@@ -1,5 +1,7 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
 const db = require('../config/db');
 const cron = require('node-cron');
 
@@ -7,6 +9,12 @@ let whatsappClient = null;
 let isReady = false;
 
 const REMINDER_DAYS = [5, 4, 3, 2, 1, 0, -1, -2];
+
+// Ensure public folder exists
+const publicDir = path.join(__dirname, '../public');
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
+}
 
 function initWhatsApp() {
   console.log('--- INITIALIZING WHATSAPP CLIENT ---');
@@ -31,15 +39,43 @@ function initWhatsApp() {
     }
   });
 
-  whatsappClient.on('qr', (qr) => {
+  whatsappClient.on('qr', async (qr) => {
     console.log('--- WHATSAPP QR CODE GENERATED ---');
-    console.log('Scan this QR code with your WhatsApp Business account to connect:');
-    qrcode.generate(qr, { small: true });
+    try {
+      const qrPath = path.join(publicDir, 'qr.png');
+      
+      // Delete old QR if exists
+      if (fs.existsSync(qrPath)) {
+        fs.unlinkSync(qrPath);
+      }
+
+      // Generate and save new QR PNG
+      await QRCode.toFile(qrPath, qr, {
+        width: 500,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+      
+      console.log('--- WHATSAPP QR SAVED AS PNG: /public/qr.png ---');
+    } catch (err) {
+      console.error('--- ERROR GENERATING QR PNG ---', err);
+    }
   });
 
   whatsappClient.on('ready', () => {
     console.log('--- WHATSAPP CLIENT IS READY ---');
     isReady = true;
+    
+    // Clean up QR file when connected
+    const qrPath = path.join(publicDir, 'qr.png');
+    if (fs.existsSync(qrPath)) {
+      fs.unlinkSync(qrPath);
+      console.log('--- WHATSAPP QR PNG CLEANED UP (CONNECTED) ---');
+    }
+    
     startCronJob();
   });
 
