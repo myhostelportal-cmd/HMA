@@ -46,7 +46,7 @@ function initWhatsApp(forceReset = false) {
   }
 
   console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
-  console.log('--- CHROME EXECUTABLE PATH BEING USED ---', '/opt/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome');
+  console.log('--- SYSTEM CHROMIUM PATH BEING USED ---', '/usr/bin/chromium-browser');
 
   whatsappClient = new Client({
     authStrategy: new LocalAuth({
@@ -54,7 +54,7 @@ function initWhatsApp(forceReset = false) {
     }),
     puppeteer: {
       headless: 'new',
-      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
+      executablePath: '/usr/bin/chromium-browser',
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox',
