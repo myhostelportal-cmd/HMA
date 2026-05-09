@@ -46,7 +46,19 @@ function initWhatsApp(forceReset = false) {
   }
 
   console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
-  console.log('--- PROJECT-INSTALLED CHROME EXECUTABLE PATH ---', '/opt/render/project/.chrome/chrome/linux-146.0.7680.31/chrome-linux64/chrome');
+  
+  const chromePath = '/opt/render/project/.chrome/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
+  console.log('--- PROJECT-INSTALLED CHROME EXECUTABLE PATH ---', chromePath);
+  
+  try {
+    if (fs.existsSync(chromePath)) {
+      console.log('--- CHROME EXECUTABLE EXISTS AT PATH ---');
+    } else {
+      console.warn('--- CHROME EXECUTABLE NOT FOUND AT PATH ---');
+    }
+  } catch (err) {
+    console.error('--- ERROR CHECKING CHROME EXECUTABLE ---', err);
+  }
 
   whatsappClient = new Client({
     authStrategy: new LocalAuth({
@@ -54,7 +66,7 @@ function initWhatsApp(forceReset = false) {
     }),
     puppeteer: {
       headless: 'new',
-      executablePath: '/opt/render/project/.chrome/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
+      executablePath: chromePath,
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox',
@@ -62,7 +74,6 @@ function initWhatsApp(forceReset = false) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--single-process',
         '--disable-gpu'
       ]
     }
@@ -131,7 +142,10 @@ function initWhatsApp(forceReset = false) {
     }
   });
 
-  whatsappClient.initialize().catch(err => {
+  console.log('--- STARTING WHATSAPP CLIENT INITIALIZATION ---');
+  whatsappClient.initialize().then(() => {
+    console.log('--- WHATSAPP CLIENT INITIALIZE PROMISE RESOLVED ---');
+  }).catch(err => {
     console.error('--- WHATSAPP INITIALIZATION ERROR ---', err);
   });
 }
