@@ -46,7 +46,9 @@ function initWhatsApp(forceReset = false) {
   }
 
   console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
-  console.log('--- PUPPETEER EXECUTABLE PATH:', process.env.PUPPETEER_EXECUTABLE_PATH);
+
+  const puppeteerExecPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  console.log('--- PUPPETEER EXECUTABLE PATH BEING USED ---', puppeteerExecPath);
 
   whatsappClient = new Client({
     authStrategy: new LocalAuth({
@@ -67,6 +69,8 @@ function initWhatsApp(forceReset = false) {
       ]
     }
   });
+
+  console.log('--- PUPPETEER CONFIGURATION SET ---');
 
   whatsappClient.on('qr', async (qr) => {
     console.log('--- NEW WHATSAPP QR CODE GENERATED ---');
