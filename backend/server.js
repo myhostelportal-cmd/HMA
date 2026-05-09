@@ -160,7 +160,8 @@ app.get('/', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-  initWhatsApp();
+  // Initialize WhatsApp with forceReset: true to clear old session and rebuild
+  initWhatsApp(true);
 });
 
 // Force keep-alive

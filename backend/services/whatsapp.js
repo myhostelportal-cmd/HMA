@@ -10,14 +10,42 @@ let isReady = false;
 
 const REMINDER_DAYS = [5, 4, 3, 2, 1, 0, -1, -2];
 
-// Ensure public folder exists
+// Paths for session and cache
+const authPath = path.join(__dirname, '../.wwebjs_auth');
+const cachePath = path.join(__dirname, '../.wwebjs_cache');
 const publicDir = path.join(__dirname, '../public');
+
+// Ensure public folder exists
 if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
 
-function initWhatsApp() {
-  console.log('--- INITIALIZING WHATSAPP CLIENT ---');
+/**
+ * Safely resets the WhatsApp session by deleting auth and cache folders
+ */
+function resetWhatsAppSession() {
+  console.log('--- STARTING WHATSAPP SESSION RESET ---');
+  try {
+    if (fs.existsSync(authPath)) {
+      fs.rmSync(authPath, { recursive: true, force: true });
+      console.log('--- AUTH CACHE (.wwebjs_auth) DELETED ---');
+    }
+    if (fs.existsSync(cachePath)) {
+      fs.rmSync(cachePath, { recursive: true, force: true });
+      console.log('--- SESSION CACHE (.wwebjs_cache) DELETED ---');
+    }
+    console.log('--- WHATSAPP SESSION RESET COMPLETE ---');
+  } catch (err) {
+    console.error('--- ERROR DURING SESSION RESET ---', err);
+  }
+}
+
+function initWhatsApp(forceReset = false) {
+  if (forceReset) {
+    resetWhatsAppSession();
+  }
+
+  console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
 
   whatsappClient = new Client({
     authStrategy: new LocalAuth({
@@ -40,7 +68,7 @@ function initWhatsApp() {
   });
 
   whatsappClient.on('qr', async (qr) => {
-    console.log('--- WHATSAPP QR CODE GENERATED ---');
+    console.log('--- NEW WHATSAPP QR CODE GENERATED ---');
     try {
       const qrPath = path.join(publicDir, 'qr.png');
       
@@ -65,8 +93,12 @@ function initWhatsApp() {
     }
   });
 
+  whatsappClient.on('authenticated', () => {
+    console.log('--- WHATSAPP AUTHENTICATED SUCCESSFULLY ---');
+  });
+
   whatsappClient.on('ready', () => {
-    console.log('--- WHATSAPP CLIENT IS READY ---');
+    console.log('--- WHATSAPP CLIENT IS READY & CONNECTED ---');
     isReady = true;
     
     // QR cleanup temporarily disabled for QR browser access
@@ -81,17 +113,19 @@ function initWhatsApp() {
     startCronJob();
   });
 
-  whatsappClient.on('authenticated', () => {
-    console.log('--- WHATSAPP AUTHENTICATED ---');
-  });
-
   whatsappClient.on('auth_failure', (msg) => {
     console.error('--- WHATSAPP AUTHENTICATION FAILED ---', msg);
+    console.log('--- TRIGGERING SESSION RESET DUE TO AUTH FAILURE ---');
+    resetWhatsAppSession();
   });
 
   whatsappClient.on('disconnected', (reason) => {
-    console.log('--- WHATSAPP DISCONNECTED ---', reason);
+    console.log('--- WHATSAPP DISCONNECTED --- Reason:', reason);
     isReady = false;
+    if (reason === 'NAVIGATION' || reason === 'LOGOUT') {
+      console.log('--- TRIGGERING SESSION RESET DUE TO DISCONNECT ---');
+      resetWhatsAppSession();
+    }
   });
 
   whatsappClient.initialize().catch(err => {
