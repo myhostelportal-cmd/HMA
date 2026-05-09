@@ -69,12 +69,14 @@ function initWhatsApp() {
     console.log('--- WHATSAPP CLIENT IS READY ---');
     isReady = true;
     
-    // Clean up QR file when connected
+    // QR cleanup temporarily disabled for QR browser access
+    /*
     const qrPath = path.join(publicDir, 'qr.png');
     if (fs.existsSync(qrPath)) {
       fs.unlinkSync(qrPath);
       console.log('--- WHATSAPP QR PNG CLEANED UP (CONNECTED) ---');
     }
+    */
     
     startCronJob();
   });
