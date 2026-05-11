@@ -10,19 +10,14 @@ let isReady = false;
 
 const REMINDER_DAYS = [5, 4, 3, 2, 1, 0, -1, -2];
 
-// Paths for session and cache
 const authPath = path.join(__dirname, '../.wwebjs_auth');
 const cachePath = path.join(__dirname, '../.wwebjs_cache');
 const publicDir = path.join(__dirname, '../public');
 
-// Ensure public folder exists
 if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
 
-/**
- * Safely resets the WhatsApp session by deleting auth and cache folders
- */
 function resetWhatsAppSession() {
   console.log('--- STARTING WHATSAPP SESSION RESET ---');
   try {
@@ -41,32 +36,30 @@ function resetWhatsAppSession() {
 }
 
 function initWhatsApp(forceReset = false) {
-  if (forceReset) {
-    resetWhatsAppSession();
-  }
+  console.log('--- STARTING WHATSAPP INITIALIZATION ---');
 
-  console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
-  
-  const chromePath = '/opt/render/project/.chrome/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
-  console.log('--- PROJECT-INSTALLED CHROME EXECUTABLE PATH ---', chromePath);
-  
   try {
-    if (fs.existsSync(chromePath)) {
-      console.log('--- CHROME EXECUTABLE EXISTS AT PATH ---');
-    } else {
-      console.warn('--- CHROME EXECUTABLE NOT FOUND AT PATH ---');
+    if (forceReset) {
+      resetWhatsAppSession();
     }
-  } catch (err) {
-    console.error('--- ERROR CHECKING CHROME EXECUTABLE ---', err);
-  }
 
-  whatsappClient = new Client({
-    authStrategy: new LocalAuth({
-      dataPath: './.wwebjs_auth'
-    }),
-    puppeteer: {
+    console.log('--- INITIALIZING WHATSAPP CLIENT (FRESH SESSION) ---');
+
+    const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    console.log('--- PUPPETEER EXECUTABLE PATH FROM ENV ---', chromePath);
+
+    try {
+      if (chromePath && fs.existsSync(chromePath)) {
+        console.log('--- CHROME EXECUTABLE EXISTS AT PATH ---');
+      } else if (chromePath) {
+        console.warn('--- CHROME EXECUTABLE NOT FOUND AT PROVIDED PATH ---');
+      }
+    } catch (err) {
+      console.error('--- ERROR CHECKING CHROME EXECUTABLE ---', err);
+    }
+
+    const puppeteerConfig = {
       headless: 'new',
-      executablePath: chromePath,
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox',
@@ -74,105 +67,85 @@ function initWhatsApp(forceReset = false) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--disable-default-apps',
-        '--disable-sync',
-        '--metrics-recording-only',
-        '--no-pings',
-        '--disable-notifications',
-        '--disable-hang-monitor',
-        '--disable-prompt-on-repost',
-        '--disable-client-side-phishing-detection',
-        '--disable-component-update',
-        '--disable-domain-reliability',
-        '--disable-features=AudioServiceOutOfProcess',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--aggressive-cache-discard',
-        '--disable-cache',
-        '--disable-application-cache',
-        '--disable-offline-load-stale-cache',
-        '--disk-cache-size=0',
-        '--media-cache-size=0',
-        '--disable-infobars',
-        '--disable-translate',
-        '--mute-audio',
-        '--ignore-certificate-errors'
+        '--single-process',
+        '--disable-gpu'
       ]
+    };
+
+    if (chromePath) {
+      puppeteerConfig.executablePath = chromePath;
     }
-  });
 
-  console.log('--- PUPPETEER CONFIGURATION SET ---');
+    whatsappClient = new Client({
+      authStrategy: new LocalAuth({
+        dataPath: './.wwebjs_auth'
+      }),
+      puppeteer: puppeteerConfig
+    });
 
-  whatsappClient.on('qr', async (qr) => {
-    console.log('--- NEW WHATSAPP QR CODE GENERATED ---');
-    try {
-      const qrPath = path.join(publicDir, 'qr.png');
-      
-      // Delete old QR if exists
-      if (fs.existsSync(qrPath)) {
-        fs.unlinkSync(qrPath);
-      }
+    console.log('--- PUPPETEER CONFIGURATION SET ---');
 
-      // Generate and save new QR PNG
-      await QRCode.toFile(qrPath, qr, {
-        width: 500,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
+    whatsappClient.on('qr', async (qr) => {
+      console.log('--- NEW WHATSAPP QR CODE GENERATED ---');
+      try {
+        const qrPath = path.join(publicDir, 'qr.png');
+        
+        if (fs.existsSync(qrPath)) {
+          fs.unlinkSync(qrPath);
         }
-      });
+
+        await QRCode.toFile(qrPath, qr, {
+          width: 500,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff'
+          }
+        });
+        
+        console.log('--- WHATSAPP QR SAVED AS PNG: /public/qr.png ---');
+      } catch (err) {
+        console.error('--- ERROR GENERATING QR PNG ---', err);
+      }
+    });
+
+    whatsappClient.on('authenticated', () => {
+      console.log('--- WHATSAPP AUTHENTICATED SUCCESSFULLY ---');
+    });
+
+    whatsappClient.on('ready', () => {
+      console.log('--- WHATSAPP CLIENT IS READY & CONNECTED ---');
+      isReady = true;
       
-      console.log('--- WHATSAPP QR SAVED AS PNG: /public/qr.png ---');
-    } catch (err) {
-      console.error('--- ERROR GENERATING QR PNG ---', err);
-    }
-  });
+      try {
+        startCronJob();
+      } catch (err) {
+        console.error('--- ERROR STARTING CRON JOB ---', err);
+      }
+    });
 
-  whatsappClient.on('authenticated', () => {
-    console.log('--- WHATSAPP AUTHENTICATED SUCCESSFULLY ---');
-  });
+    whatsappClient.on('auth_failure', (msg) => {
+      console.error('--- WHATSAPP AUTHENTICATION FAILED ---', msg);
+      isReady = false;
+    });
 
-  whatsappClient.on('ready', () => {
-    console.log('--- WHATSAPP CLIENT IS READY & CONNECTED ---');
-    isReady = true;
-    
-    // QR cleanup temporarily disabled for QR browser access
-    /*
-    const qrPath = path.join(publicDir, 'qr.png');
-    if (fs.existsSync(qrPath)) {
-      fs.unlinkSync(qrPath);
-      console.log('--- WHATSAPP QR PNG CLEANED UP (CONNECTED) ---');
-    }
-    */
-    
-    startCronJob();
-  });
+    whatsappClient.on('disconnected', (reason) => {
+      console.log('--- WHATSAPP DISCONNECTED --- Reason:', reason);
+      isReady = false;
+    });
 
-  whatsappClient.on('auth_failure', (msg) => {
-    console.error('--- WHATSAPP AUTHENTICATION FAILED ---', msg);
-    console.log('--- TRIGGERING SESSION RESET DUE TO AUTH FAILURE ---');
-    resetWhatsAppSession();
-  });
+    console.log('--- STARTING WHATSAPP CLIENT INITIALIZATION ---');
+    whatsappClient.initialize().then(() => {
+      console.log('--- WHATSAPP CLIENT INITIALIZE PROMISE RESOLVED ---');
+    }).catch(err => {
+      console.error('--- WHATSAPP INITIALIZATION ERROR ---', err);
+      isReady = false;
+    });
 
-  whatsappClient.on('disconnected', (reason) => {
-    console.log('--- WHATSAPP DISCONNECTED --- Reason:', reason);
+  } catch (err) {
+    console.error('--- FATAL ERROR IN WHATSAPP INITIALIZATION ---', err);
     isReady = false;
-    if (reason === 'NAVIGATION' || reason === 'LOGOUT') {
-      console.log('--- TRIGGERING SESSION RESET DUE TO DISCONNECT ---');
-      resetWhatsAppSession();
-    }
-  });
-
-  console.log('--- STARTING WHATSAPP CLIENT INITIALIZATION ---');
-  whatsappClient.initialize().then(() => {
-    console.log('--- WHATSAPP CLIENT INITIALIZE PROMISE RESOLVED ---');
-  }).catch(err => {
-    console.error('--- WHATSAPP INITIALIZATION ERROR ---', err);
-  });
+  }
 }
 
 async function sendWhatsAppMessage(phoneNumber, message) {
@@ -332,15 +305,19 @@ function generateReminderMessage(studentName, days, fee) {
 function startCronJob() {
   console.log('--- STARTING DAILY REMINDER CRON JOB (9:00 AM) ---');
 
-  cron.schedule('0 9 * * *', async () => {
-    console.log('--- CRON JOB TRIGGERED ---');
-    await checkAndSendReminders();
-  }, {
-    scheduled: true,
-    timezone: 'Asia/Kolkata'
-  });
+  try {
+    cron.schedule('0 9 * * *', async () => {
+      console.log('--- CRON JOB TRIGGERED ---');
+      await checkAndSendReminders();
+    }, {
+      scheduled: true,
+      timezone: 'Asia/Kolkata'
+    });
 
-  console.log('--- CRON JOB SCHEDULED SUCCESSFULLY ---');
+    console.log('--- CRON JOB SCHEDULED SUCCESSFULLY ---');
+  } catch (err) {
+    console.error('--- ERROR STARTING CRON JOB ---', err);
+  }
 }
 
 async function sendPriorityDueReminders(hostelId = null) {
