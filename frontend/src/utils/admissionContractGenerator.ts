@@ -802,16 +802,6 @@ export const generateAdmissionContract = async (
         5: {
           halign: "center",
           cellWidth: "auto",
-          fillColor: (cell: any) => {
-            const val = String(cell.raw || "").toLowerCase();
-            if (val.includes("paid") || val.includes("settled")) return [220, 252, 231]; // Light Green
-            if (val.includes("advance")) return [219, 234, 254]; // Light Blue
-            if (val.includes("pending")) return [255, 237, 213]; // Light Orange
-            if (val.includes("partial")) return [254, 252, 232]; // Light Yellow
-            if (val.includes("unpaid") || val.includes("overdue")) return [254, 226, 226]; // Light Red
-            if (val.includes("running")) return [209, 250, 229]; // Light Teal
-            return [243, 244, 246]; // Light Gray
-          },
           textColor: [0, 0, 0],
           fontStyle: "bold",
           fontSize: 8
@@ -829,6 +819,37 @@ export const generateAdmissionContract = async (
       margin: { left: marginLeft, right: marginRight, top: 20, bottom: 20 },
       pageBreak: "auto",
       tableWidth: "100%",
+      didDrawCell: (data) => {
+        if (data.section === "body" && data.column.index === 5) {
+          const val = String(data.cell.raw || "").toLowerCase();
+          let fillColor: [number, number, number];
+          if (val.includes("paid") || val.includes("settled")) {
+            fillColor = [220, 252, 231]; // Light Green
+          } else if (val.includes("advance")) {
+            fillColor = [219, 234, 254]; // Light Blue
+          } else if (val.includes("pending")) {
+            fillColor = [255, 237, 213]; // Light Orange
+          } else if (val.includes("partial")) {
+            fillColor = [254, 252, 232]; // Light Yellow
+          } else if (val.includes("unpaid") || val.includes("overdue")) {
+            fillColor = [254, 226, 226]; // Light Red
+          } else if (val.includes("running")) {
+            fillColor = [209, 250, 229]; // Light Teal
+          } else {
+            fillColor = [243, 244, 246]; // Light Gray
+          }
+          doc.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
+          // Redraw text on top
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "bold");
+          if (typeof data.cell.raw === "string") {
+            const textLines = doc.splitTextToSize(data.cell.raw, data.cell.width - 8);
+            doc.text(textLines, data.cell.x + 4, data.cell.y + 8);
+          }
+        }
+      }
     });
   } else {
     doc.setFontSize(9.5);
