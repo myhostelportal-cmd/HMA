@@ -1,12 +1,65 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 const whatsappMulti = require('./services/whatsapp-multi');
+const db = require('./config/db');
 
 const app = express();
 const port = process.env.PORT || 5001;
-const path = require('path');
+
+// Function to apply WhatsApp sessions migration
+async function applyWhatsAppMigration() {
+  try {
+    console.log('Checking/updating WhatsApp sessions table...');
+    
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS warden_whatsapp_sessions (
+        warden_id INTEGER PRIMARY KEY REFERENCES wardens(warden_id) ON DELETE CASCADE,
+        hostel_id INTEGER REFERENCES hostels(hostel_id) ON DELETE SET NULL,
+        owner_id INTEGER REFERENCES owners(owner_id) ON DELETE SET NULL,
+        status VARCHAR(20) DEFAULT 'disconnected',
+        connected_phone VARCHAR(20),
+        last_connected TIMESTAMP,
+        qr_code_path TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
+    await db.query(createTableSQL);
+    
+    // Now create/update the timestamp trigger
+    const createTriggerSQL = `
+      CREATE OR REPLACE FUNCTION update_updated_at_column()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `;
+    
+    await db.query(createTriggerSQL);
+    
+    // Drop existing trigger if any and recreate
+    await db.query(`
+      DROP TRIGGER IF EXISTS update_warden_whatsapp_sessions_updated_at ON warden_whatsapp_sessions
+    `);
+    
+    await db.query(`
+      CREATE TRIGGER update_warden_whatsapp_sessions_updated_at
+      BEFORE UPDATE ON warden_whatsapp_sessions
+      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
+    `);
+    
+    console.log('✅ WhatsApp sessions table is ready!');
+  } catch (err) {
+    console.error('❌ Error applying WhatsApp migration:', err);
+  }
+}
 
 // Middleware
 const allowedOrigins = [
@@ -204,8 +257,10 @@ app.get('/', (req, res) => {
   res.json({ message: 'Hostel Management System API is running.' });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Server is running on port ${port}`);
+  // Apply WhatsApp migration
+  await applyWhatsAppMigration();
   // Restore existing WhatsApp sessions
   whatsappMulti.restoreSessions();
 });
