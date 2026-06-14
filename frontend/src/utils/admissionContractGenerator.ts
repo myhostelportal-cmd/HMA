@@ -818,7 +818,6 @@ export const generateAdmissionContract = async (
       },
       margin: { left: marginLeft, right: marginRight, top: 20, bottom: 20 },
       pageBreak: "auto",
-      tableWidth: "100%",
       didDrawCell: (data) => {
         if (data.section === "body" && data.column.index === 5) {
           const val = String(data.cell.raw || "").toLowerCase();
