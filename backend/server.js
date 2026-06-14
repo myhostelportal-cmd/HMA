@@ -95,7 +95,6 @@ app.use(morgan('dev'));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Database Test (Using PostgreSQL)
-const db = require('./config/db');
 db.query('SELECT NOW()', (err, res) => {
   if (err) {
       console.error('--- DB CONNECTION ERROR ON STARTUP ---');
