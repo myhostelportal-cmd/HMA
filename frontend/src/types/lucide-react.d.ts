@@ -1,4 +1,1 @@
-declare module 'lucide-react' {
-  const module: any;
-  export = module;
-}
+declare module 'lucide-react';
