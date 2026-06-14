@@ -185,6 +185,12 @@ router.post('/forgot-password', async (req, res) => {
       res.json({ message: 'Password reset link sent to your email.' });
     } catch (mailErr) {
       console.error(`--- EMAIL SENDING FAILED ---`, mailErr);
+      console.error(`--- EMAIL ERROR DETAILS ---`, {
+        code: mailErr.code,
+        message: mailErr.message,
+        response: mailErr.response,
+        command: mailErr.command
+      });
       
       // FALLBACK: Log the link to the console so the admin/user can still recover during development
       const fallbackUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password?token=${token}&email=${email}`;
@@ -192,7 +198,8 @@ router.post('/forgot-password', async (req, res) => {
       
       res.status(500).json({ 
         error: 'Email service is currently unavailable. Please contact admin with your email address for a manual reset link.',
-        dev_note: 'Admin can find the reset link in the server logs.'
+        dev_note: 'Admin can find the reset link in the server logs.',
+        error_details: mailErr.message // Optional: show error message to frontend for debugging
       });
     }
 

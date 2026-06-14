@@ -21,7 +21,8 @@ import {
   Menu,
   X,
   ShieldCheck,
-  CalendarCheck
+  CalendarCheck,
+  MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +50,7 @@ const menuItems = {
     { label: 'Rooms', icon: Building2, href: '/warden/rooms' },
     { label: 'Fees', icon: CreditCard, href: '/warden/fees' },
     { label: 'Expenses', icon: Receipt, href: '/warden/expenses' },
+    { label: 'WhatsApp Integration', icon: MessageCircle, href: '/warden/whatsapp' },
   ],
   owner: [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/owner' },

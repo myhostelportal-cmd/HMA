@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 require('dotenv').config();
-const { initWhatsApp } = require('./services/whatsapp');
+const whatsappMulti = require('./services/whatsapp-multi');
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -95,51 +95,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Manual WhatsApp Reminders Endpoint (Warden Only) - Priority Due Alerts Only
-app.post('/api/warden/send-reminders', authenticateToken, authorizeRoles('warden', 'admin', 'owner'), async (req, res) => {
-  try {
-    const { sendPriorityDueReminders, isReady } = require('./services/whatsapp');
 
-    if (!isReady()) {
-      return res.status(400).json({ error: 'WhatsApp service not connected. Please scan QR code first.' });
-    }
-
-    const user = req.user;
-    let hostelId = null;
-
-    if (user.role === 'warden') {
-      const wardenHostelRes = await db.query('SELECT hostel_id FROM hostels WHERE warden_id = $1', [user.id]);
-      if (wardenHostelRes.rows.length === 0) {
-        return res.status(403).json({ error: 'No hostel assigned to this warden' });
-      }
-      hostelId = wardenHostelRes.rows[0].hostel_id;
-    }
-
-    const result = await sendPriorityDueReminders(hostelId);
-    
-    if (result.success) {
-      if (result.totalStudents === 0) {
-        res.status(200).json({
-          message: 'No priority due alerts found',
-          ...result
-        });
-      } else {
-        res.status(200).json({
-          message: 'Reminders sent successfully',
-          ...result
-        });
-      }
-    } else {
-      res.status(500).json({
-        error: 'Failed to send reminders',
-        details: result.error
-      });
-    }
-  } catch (err) {
-    console.error('--- SEND REMINDERS FAILED ---', err);
-    res.status(500).json({ error: 'Failed to send reminders' });
-  }
-});
 
 // WhatsApp QR Code Status Endpoint
 app.get('/api/whatsapp-qr', async (req, res) => {
@@ -168,15 +124,79 @@ app.get('/api/whatsapp-qr', async (req, res) => {
   }
 });
 
-// Test WhatsApp Reminders Endpoint
-app.get('/api/test-reminders', async (req, res) => {
+// ==================== WhatsApp Integration Endpoints ====================
+
+// Get WhatsApp status for current warden
+app.get('/api/warden/whatsapp/status', authenticateToken, authorizeRoles('warden'), async (req, res) => {
   try {
-    const { testReminders } = require('./services/whatsapp');
-    res.status(200).json({ message: 'Test reminders triggered, check server logs' });
-    testReminders();
+    console.log('[WhatsApp] Getting status for warden:', req.user.id);
+    const status = await whatsappMulti.getSessionStatus(req.user.id);
+    console.log('[WhatsApp] Status result:', status);
+    res.status(200).json(status);
   } catch (err) {
-    console.error('--- TEST REMINDERS FAILED ---', err);
-    res.status(500).json({ error: 'Failed to trigger test reminders' });
+    console.error('[WhatsApp] Error getting status:', err);
+    console.error('[WhatsApp] Error stack:', err.stack);
+    res.status(500).json({ error: 'Failed to get WhatsApp status', details: err.message });
+  }
+});
+
+// Connect WhatsApp for current warden
+app.post('/api/warden/whatsapp/connect', authenticateToken, authorizeRoles('warden'), async (req, res) => {
+  try {
+    console.log('[WhatsApp] Connecting for warden:', req.user.id);
+    await whatsappMulti.initWardenSession(req.user.id, true);
+    res.status(200).json({ message: 'WhatsApp connection initiated, please scan QR code' });
+  } catch (err) {
+    console.error('[WhatsApp] Error connecting:', err);
+    console.error('[WhatsApp] Error stack:', err.stack);
+    res.status(500).json({ error: 'Failed to connect WhatsApp', details: err.message });
+  }
+});
+
+// Disconnect WhatsApp for current warden
+app.post('/api/warden/whatsapp/disconnect', authenticateToken, authorizeRoles('warden'), async (req, res) => {
+  try {
+    console.log('[WhatsApp] Disconnecting for warden:', req.user.id);
+    await whatsappMulti.destroyWardenSession(req.user.id);
+    res.status(200).json({ message: 'WhatsApp disconnected successfully' });
+  } catch (err) {
+    console.error('[WhatsApp] Error disconnecting:', err);
+    console.error('[WhatsApp] Error stack:', err.stack);
+    res.status(500).json({ error: 'Failed to disconnect WhatsApp', details: err.message });
+  }
+});
+
+// Updated Manual WhatsApp Reminders Endpoint (Warden Only)
+app.post('/api/warden/send-reminders', authenticateToken, authorizeRoles('warden', 'admin', 'owner'), async (req, res) => {
+  try {
+    const user = req.user;
+    
+    if (user.role !== 'warden') {
+      return res.status(403).json({ error: 'Only wardens can send reminders' });
+    }
+
+    const result = await whatsappMulti.sendPriorityDueReminders(user.id);
+    
+    if (result.success) {
+      if (result.totalStudents === 0) {
+        res.status(200).json({
+          message: 'No priority due alerts found',
+          ...result
+        });
+      } else {
+        res.status(200).json({
+          message: 'Reminders sent successfully',
+          ...result
+        });
+      }
+    } else {
+      res.status(400).json({
+        error: result.error || 'Failed to send reminders'
+      });
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Send reminders failed:', err);
+    res.status(500).json({ error: 'Failed to send reminders' });
   }
 });
 
@@ -186,8 +206,8 @@ app.get('/', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-  // Initialize WhatsApp with forceReset: true to clear old session and rebuild
-  initWhatsApp(true);
+  // Restore existing WhatsApp sessions
+  whatsappMulti.restoreSessions();
 });
 
 // Force keep-alive

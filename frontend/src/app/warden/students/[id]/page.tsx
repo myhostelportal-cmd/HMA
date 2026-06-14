@@ -5,9 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from 'framer-motion';
 import api from "@/lib/api";
 import Sidebar from '@/components/layout/Sidebar';
-import { 
-  ArrowLeft, 
-  User, 
+import {
+  ArrowLeft,
+  User,
   Phone,
   Mail,
   Calendar,
@@ -16,10 +16,10 @@ import {
   MapPin,
   GraduationCap,
   Home,
-  CreditCard, 
-  History, 
-  Save, 
-  X, 
+  CreditCard,
+  History,
+  Save,
+  X,
   Plus,
   CheckCircle2,
   Clock,
@@ -42,10 +42,13 @@ import {
   Fingerprint,
   Heart,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  Printer,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadReceipt as generateReceipt } from "@/utils/receiptGenerator";
+import { generateAdmissionContract } from "@/utils/admissionContractGenerator";
 
 interface StudentProfile {
   student_id: number;
@@ -174,6 +177,7 @@ export default function StudentProfilePage() {
   const [exiting, setExiting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [exitReason, setExitReason] = useState("");
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   const getAvailableSecurity = () => {
     if (!student) return 0;
@@ -476,6 +480,49 @@ export default function StudentProfilePage() {
     window.open(whatsappUrl, '_blank');
   };
 
+  const handleGenerateAdmissionContract = async () => {
+    if (!student) return;
+    setPdfGenerating(true);
+    try {
+      // Prepare hostel data
+      const hostelData = {
+        hostel_name: student.hostel_name || "Hostel",
+        hostel_address: student.hostel_address || "Address not available",
+        city: "City",
+        state: "State",
+        phone_number: student.hostel_contact || "N/A",
+        whatsapp_number: student.hostel_contact || "N/A"
+      };
+
+      // Prepare room data
+      const roomData = {
+        room_number: student.room_number || "N/A",
+        floor: student.floor || "N/A",
+        room_type: student.room_type || (student.details?.room_category || "N/A"),
+        capacity: student.room_capacity || 1,
+        current_occupancy: 1
+      };
+
+      // Prepare fee data with total session fees for percentage calculation
+      const feeData = {
+        security_deposit: student.security_deposit || 0,
+        monthly_fee: student.monthly_fee || 0,
+        total_due: feeStats.totalDue || 0,
+        total_paid: feeStats.totalPaid || 0,
+        outstanding_balance: feeStats.totalDue || 0,
+        total_session_fees: student.total_session_fees || 0,
+        payment_completion_percent: feeStats.progress || 0
+      };
+
+      await generateAdmissionContract(hostelData, student, roomData, feeData, existingFees);
+    } catch (error) {
+      console.error("Error generating admission contract:", error);
+      alert("Failed to generate admission contract. Please try again.");
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -524,6 +571,22 @@ export default function StudentProfilePage() {
             </button>
             
             <div className="flex items-center gap-4">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleGenerateAdmissionContract}
+                disabled={pdfGenerating}
+                className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-indigo-600 to-violet-700 text-white rounded-full border border-indigo-700 shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all duration-300"
+              >
+                {pdfGenerating ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Printer size={14} />
+                )}
+                <span className="font-black text-[9px] md:text-[10px] uppercase tracking-widest">
+                  {pdfGenerating ? "Generating..." : "Print Admission Contract"}
+                </span>
+              </motion.button>
               <div className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-indigo-50 rounded-full border border-indigo-100">
                 <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-pulse"></div>
                 <span className="text-indigo-600 font-black text-[9px] md:text-[10px] uppercase tracking-widest">Warden Control</span>

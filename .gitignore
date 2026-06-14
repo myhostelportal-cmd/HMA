@@ -7,6 +7,9 @@ build/
 .env.production
 server.log
 .wwebjs_auth/
+.wwebjs_cache/
+.wwebjs_sessions/
+database/
 
 # Next.js
 .next/
