@@ -120,6 +120,51 @@ async function initWardenSession(wardenId, forceReset = false) {
   if (executablePath && !fs.existsSync(executablePath)) {
     console.error('[WhatsApp] Chrome executable does NOT exist at path:', executablePath);
   }
+
+  // ==================== ADD DETAILED LOGGING HERE ====================
+  const puppeteer = require('puppeteer');
+  
+  console.log('\n[WhatsApp DIAGNOSTICS] =======================================');
+  console.log('1. process.env.PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
+  console.log('2. process.env.PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH);
+  
+  const puppeteerExePath = await puppeteer.executablePath();
+  console.log('3. await puppeteer.executablePath():', puppeteerExePath);
+  
+  const puppeteerExeExists = fs.existsSync(puppeteerExePath);
+  console.log('4. fs.existsSync(await puppeteer.executablePath()):', puppeteerExeExists);
+  
+  // Recursively scan and print folders
+  function scanDirectory(dir, depth = 0) {
+    if (!fs.existsSync(dir)) {
+      console.log('   '.repeat(depth) + `[NOT FOUND] ${dir}`);
+      return;
+    }
+    
+    try {
+      const files = fs.readdirSync(dir, { withFileTypes: true });
+      console.log('   '.repeat(depth) + `[DIR] ${dir}`);
+      
+      for (const file of files) {
+        const fullPath = path.join(dir, file.name);
+        if (file.isDirectory()) {
+          scanDirectory(fullPath, depth + 1);
+        } else {
+          console.log('   '.repeat(depth + 1) + `[FILE] ${file.name}`);
+        }
+      }
+    } catch (err) {
+      console.log('   '.repeat(depth) + `[ERROR] Cannot scan ${dir}:`, err.message);
+    }
+  }
+  
+  console.log('\n5. Scanning /opt/render/project/.chrome:');
+  scanDirectory('/opt/render/project/.chrome');
+  
+  console.log('\n6. Scanning /opt/render/.cache/puppeteer:');
+  scanDirectory('/opt/render/.cache/puppeteer');
+  console.log('[WhatsApp DIAGNOSTICS] =======================================\n');
+  // ==================== END OF DETAILED LOGGING ====================
   
   // Initialize WhatsApp client
   const client = new Client({
