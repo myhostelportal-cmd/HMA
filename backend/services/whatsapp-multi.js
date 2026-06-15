@@ -497,8 +497,7 @@ async function sendPriorityDueEmailReminders(wardenId) {
     let totalStudents = 0;
     let failedEmails = 0;
 
-    // Send emails in parallel (without delays) for speed!
-    const emailPromises = [];
+    // Send emails sequentially with tiny delay (avoid Gmail rate limits!)
     for (const student of studentsResult.rows) {
       totalStudents++;
       
@@ -545,22 +544,22 @@ async function sendPriorityDueEmailReminders(wardenId) {
         `,
       };
 
-      // Add email promise to array (no await here!)
-      const emailPromise = transporter.sendMail(mailOptions)
-        .then(() => {
-          emailsSent++;
-          console.log(`[Email] Reminder sent to ${student.name} at ${studentEmail}`);
-        })
-        .catch((mailErr) => {
-          failedEmails++;
-          console.error(`[Email] Error sending to ${student.name}:`, mailErr);
-        });
+      try {
+        // Add 5-second timeout to each email
+        await Promise.race([
+          transporter.sendMail(mailOptions),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)),
+        ]);
+        emailsSent++;
+        console.log(`[Email] Reminder sent to ${student.name} at ${studentEmail}`);
+      } catch (mailErr) {
+        failedEmails++;
+        console.error(`[Email] Error sending to ${student.name}:`, mailErr);
+      }
       
-      emailPromises.push(emailPromise);
+      // Tiny 50ms delay between emails to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
-
-    // Wait for all emails to finish sending (but they're already in parallel!)
-    await Promise.all(emailPromises);
 
     console.log(`[Email] Priority reminders complete for warden ${wardenId}: ${emailsSent} sent, ${failedEmails} failed`);
 
