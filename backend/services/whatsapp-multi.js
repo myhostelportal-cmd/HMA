@@ -466,27 +466,57 @@ async function sendPriorityDueEmailReminders(wardenId) {
     const hostelName = wardenResult.rows[0].hostel_name;
 
     // Get overdue fees (same query as WhatsApp reminders)
-    const studentsResult = await db.query(
-      `SELECT 
-        s.student_id,
-        s.name, 
-        s.email,
-        s.phone,
-        s.room_id,
-        r.room_number, 
-        s.payment_model, 
-        SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) as total_due
-      FROM fees f
-      JOIN students s ON f.student_id = s.student_id
-      LEFT JOIN rooms r ON s.room_id = r.room_id
-      WHERE f.status != 'paid' 
-        AND f.due_date < CURRENT_DATE
-        AND f.hostel_id = $1
-      GROUP BY s.student_id, s.name, s.email, s.phone, s.room_id, r.room_number, s.payment_model
-      HAVING SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) > 0
-      ORDER BY total_due DESC`,
-      [hostelId]
-    );
+    // First check if email column exists (optional)
+    let studentsResult;
+    try {
+      studentsResult = await db.query(
+        `SELECT 
+          s.student_id,
+          s.name, 
+          s.email,
+          s.phone,
+          s.room_id,
+          r.room_number, 
+          s.payment_model, 
+          SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) as total_due
+        FROM fees f
+        JOIN students s ON f.student_id = s.student_id
+        LEFT JOIN rooms r ON s.room_id = r.room_id
+        WHERE f.status != 'paid' 
+          AND f.due_date < CURRENT_DATE
+          AND f.hostel_id = $1
+        GROUP BY s.student_id, s.name, s.email, s.phone, s.room_id, r.room_number, s.payment_model
+        HAVING SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) > 0
+        ORDER BY total_due DESC`,
+        [hostelId]
+      );
+    } catch (err) {
+      // If email column doesn't exist, query without it
+      if (err.message.includes('column s.email does not exist')) {
+        studentsResult = await db.query(
+          `SELECT 
+            s.student_id,
+            s.name, 
+            s.phone,
+            s.room_id,
+            r.room_number, 
+            s.payment_model, 
+            SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) as total_due
+          FROM fees f
+          JOIN students s ON f.student_id = s.student_id
+          LEFT JOIN rooms r ON s.room_id = r.room_id
+          WHERE f.status != 'paid' 
+            AND f.due_date < CURRENT_DATE
+            AND f.hostel_id = $1
+          GROUP BY s.student_id, s.name, s.phone, s.room_id, r.room_number, s.payment_model
+          HAVING SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) > 0
+          ORDER BY total_due DESC`,
+          [hostelId]
+        );
+      } else {
+        throw err;
+      }
+    }
 
     let emailsSent = 0;
     let totalStudents = 0;
