@@ -93,111 +93,24 @@ async function initWardenSession(wardenId, forceReset = false) {
     status: 'qr_pending'
   });
 
-  // ==================== CHROME DIAGNOSTICS START ====================
+  // Get official Puppeteer executable path
   const puppeteer = require('puppeteer');
+  const executablePath = puppeteer.executablePath();
+  console.log('Puppeteer executable path:', executablePath);
+  console.log('Chrome exists:', fs.existsSync(executablePath));
   
-  console.log('\n========== CHROME DIAGNOSTICS ==========');
-  
-  try {
-    const exePath = await puppeteer.executablePath();
-    
-    console.log('PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
-    console.log('PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH);
-    console.log('puppeteer.executablePath():', exePath);
-    console.log('Executable Exists:', fs.existsSync(exePath));
-  } catch (err) {
-    console.error('Error resolving executable path:', err);
-  }
-
-  // Recursively scan and print folders
-  function scanDirectory(dir, depth = 0) {
-    if (!fs.existsSync(dir)) {
-      console.log('   '.repeat(depth) + `[NOT FOUND] ${dir}`);
-      return;
-    }
-    
-    try {
-      const files = fs.readdirSync(dir, { withFileTypes: true });
-      console.log('   '.repeat(depth) + `[DIR] ${dir}`);
-      
-      for (const file of files) {
-        const fullPath = path.join(dir, file.name);
-        if (file.isDirectory()) {
-          scanDirectory(fullPath, depth + 1);
-        } else {
-          console.log('   '.repeat(depth + 1) + `[FILE] ${file.name}`);
-        }
-      }
-    } catch (err) {
-      console.log('   '.repeat(depth) + `[ERROR] Cannot scan ${dir}:`, err.message);
-    }
-  }
-
-  // Scan all possible Chrome locations
-  console.log('\nScanning /opt/render/project/.chrome:');
-  scanDirectory('/opt/render/project/.chrome');
-  
-  console.log('\nScanning /opt/render/.cache:');
-  scanDirectory('/opt/render/.cache');
-  
-  console.log('\nScanning /opt/render:');
-  scanDirectory('/opt/render');
-
-  // Find Chrome binaries recursively
-  const foundChromePaths = [];
-  
-  function findChromeBinaries(dir) {
-    if (!fs.existsSync(dir)) {
-      return;
-    }
-    
-    try {
-      const files = fs.readdirSync(dir, { withFileTypes: true });
-      
-      for (const file of files) {
-        const fullPath = path.join(dir, file.name);
-        
-        if (file.isDirectory()) {
-          findChromeBinaries(fullPath);
-        } else {
-          const fileName = file.name.toLowerCase();
-          if (fileName.includes('chrome') || fileName.includes('chromium')) {
-            foundChromePaths.push(fullPath);
-          }
-        }
-      }
-    } catch (err) {
-      // Ignore errors for certain directories
-    }
-  }
-
-  console.log('\nSearching for Chrome binaries in /opt/render:');
-  findChromeBinaries('/opt/render');
-  
-  if (foundChromePaths.length > 0) {
-    console.log('\nFOUND CHROME:');
-    foundChromePaths.forEach(path => console.log(path));
-  } else {
-    console.log('\nNO CHROME BINARIES FOUND in /opt/render');
-  }
-  
-  console.log('========== END CHROME DIAGNOSTICS ==========\n');
-  // ==================== CHROME DIAGNOSTICS END ====================
-  
-  // Initialize WhatsApp client (without forced executablePath)
+  // Initialize WhatsApp client with official executablePath
   const client = new Client({
     authStrategy: new LocalAuth({
       dataPath: sessionDir
     }),
     puppeteer: {
+      executablePath,
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
         '--disable-gpu'
       ]
     }
