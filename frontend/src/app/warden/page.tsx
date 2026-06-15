@@ -281,47 +281,50 @@ const WardenDashboard = () => {
                   </h2>
                   <p className="text-slate-400 text-sm font-medium mt-1">Here is your operational overview for today.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {/* WhatsApp Reminder Button - Green Brand Color */}
                   <button
                     onClick={sendReminders}
                     disabled={sendingReminders}
                     className={cn(
-                      "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
+                      "flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-xl",
                       sendingReminders
                         ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                        : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-600/30"
+                        : "bg-[#25D366] text-white hover:bg-[#128C7E] hover:shadow-[#25D366]/30 active:scale-95"
                     )}
                   >
                     {sendingReminders ? (
                       <>
-                        <Loader2 className="animate-spin" size={16} />
+                        <Loader2 className="animate-spin" size={20} />
                         Sending...
                       </>
                     ) : (
                       <>
-                        <Bell size={16} />
+                        <MessageSquare size={20} />
                         Send Reminder on WhatsApp
                       </>
                     )}
                   </button>
+
+                  {/* Email Reminder Button - Professional Blue */}
                   <button
                     onClick={sendEmailReminders}
                     disabled={sendingEmailReminders}
                     className={cn(
-                      "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
+                      "flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-xl",
                       sendingEmailReminders
                         ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                        : "bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-emerald-600/30"
+                        : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-95"
                     )}
                   >
                     {sendingEmailReminders ? (
                       <>
-                        <Loader2 className="animate-spin" size={16} />
+                        <Loader2 className="animate-spin" size={20} />
                         Sending...
                       </>
                     ) : (
                       <>
-                        <Mail size={16} />
+                        <Mail size={20} />
                         Send Reminder on Email
                       </>
                     )}
