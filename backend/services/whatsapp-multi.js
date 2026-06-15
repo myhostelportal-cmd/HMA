@@ -7,7 +7,12 @@ const cron = require('node-cron');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Email Transporter (force IPv4 to fix ENETUNREACH errors!)
+// Verify email credentials
+console.log('[Email] Checking email credentials:');
+console.log('[Email] EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'NOT SET');
+console.log('[Email] EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
+
+// Email Transporter (force IPv4 and verify connection!)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
@@ -18,6 +23,18 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false, // Accept self-signed certs if needed
+  },
+});
+
+// Verify transporter on startup
+transporter.verify((error) => {
+  if (error) {
+    console.error('[Email] Transporter verification failed:', error);
+  } else {
+    console.log('[Email] Transporter is ready to send emails!');
+  }
 });
 
 // Session storage
