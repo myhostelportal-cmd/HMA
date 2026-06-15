@@ -6,13 +6,41 @@ console.log('[Email] Checking email credentials:');
 console.log('[Email] EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'NOT SET');
 console.log('[Email] EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+let transporter = null;
+
+async function createTransporter() {
+  console.log('[Email] Creating transporter...');
+  
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000
+  });
+
+  // Verify transporter connection
+  try {
+    console.log('[Email] Verifying transporter connection...');
+    await transporter.verify();
+    console.log('[Email] Transporter is ready to send emails!');
+  } catch (verifyError) {
+    console.error('[Email] Transporter verification failed:', verifyError);
+  }
+
+  return transporter;
+}
+
+createTransporter();
 
 async function sendPriorityDueEmailReminders(wardenId) {
   console.log('[Email] Sending priority reminders for warden', wardenId);
@@ -60,18 +88,17 @@ async function sendPriorityDueEmailReminders(wardenId) {
       };
 
       try {
-        await Promise.race([
-          transporter.sendMail(mailOptions),
-          new Promise(function(_, reject) { setTimeout(function() { reject(new Error('Email timeout')); }, 30000); }),
-        ]);
+        console.log('[Email] Attempting to send to', studentEmail);
+        const info = await transporter.sendMail(mailOptions);
+        console.log('[Email] Reminder sent to', student.name, 'at', studentEmail, 'Message ID:', info.messageId);
         emailsSent++;
-        console.log('[Email] Reminder sent to', student.name, 'at', studentEmail);
       } catch (mailErr) {
-        failedEmails++;
         console.error('[Email] Error sending to', student.name, ':', mailErr);
+        failedEmails++;
       }
 
-      await new Promise(function(resolve) { setTimeout(resolve, 50); });
+      // Small delay to avoid rate limits
+      await new Promise(function(resolve) { setTimeout(resolve, 100); });
     }
 
     console.log('[Email] Priority reminders complete for warden', wardenId, ':', emailsSent, 'sent,', failedEmails, 'failed');
