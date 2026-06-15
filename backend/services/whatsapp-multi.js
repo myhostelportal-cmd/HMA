@@ -95,12 +95,24 @@ async function initWardenSession(wardenId, forceReset = false) {
 
   // Determine Chrome executable path (works locally and on Render)
   let executablePath;
-  const puppeteer = require('puppeteer');
   try {
+    const puppeteer = require('puppeteer');
     executablePath = puppeteer.executablePath();
   } catch (e) {
-    // Fallback to known Render path
-    executablePath = '/opt/render/project/.chrome/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
+    // On Render, find Chrome in /opt/render/project/.chrome
+    const fs = require('fs');
+    const path = require('path');
+    const baseDir = '/opt/render/project/.chrome/chrome';
+    if (fs.existsSync(baseDir)) {
+      const dirs = fs.readdirSync(baseDir);
+      for (const dir of dirs) {
+        const possiblePath = path.join(baseDir, dir, 'chrome-linux64', 'chrome');
+        if (fs.existsSync(possiblePath)) {
+          executablePath = possiblePath;
+          break;
+        }
+      }
+    }
   }
   
   // Initialize WhatsApp client
