@@ -12,29 +12,13 @@ console.log('[Email] Checking email credentials:');
 console.log('[Email] EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'NOT SET');
 console.log('[Email] EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET' : 'NOT SET');
 
-// Email Transporter (force IPv4 and verify connection!)
+// Email Transporter (EXACTLY like auth.js!)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4, // Force IPv4
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false, // Accept self-signed certs if needed
-  },
-});
-
-// Verify transporter on startup
-transporter.verify((error) => {
-  if (error) {
-    console.error('[Email] Transporter verification failed:', error);
-  } else {
-    console.log('[Email] Transporter is ready to send emails!');
-  }
 });
 
 // Session storage
@@ -562,10 +546,10 @@ async function sendPriorityDueEmailReminders(wardenId) {
       };
 
       try {
-        // Add 5-second timeout to each email
+        // Add 30-second timeout to each email (Gmail can be slow!)
         await Promise.race([
           transporter.sendMail(mailOptions),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 30000)),
         ]);
         emailsSent++;
         console.log(`[Email] Reminder sent to ${student.name} at ${studentEmail}`);
