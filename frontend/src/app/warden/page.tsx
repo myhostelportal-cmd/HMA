@@ -10,6 +10,7 @@ import {
   GraduationCap, 
   CreditCard, 
   MessageSquare,
+  Mail,
   BarChart3,
   Loader2,
   Plus,
@@ -34,6 +35,7 @@ const WardenDashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [sendingEmailReminders, setSendingEmailReminders] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
@@ -89,6 +91,43 @@ const WardenDashboard = () => {
       setTimeout(() => setToast(null), 5000);
     } finally {
       setSendingReminders(false);
+    }
+  };
+
+  const sendEmailReminders = async () => {
+    if (sendingEmailReminders) return;
+    setSendingEmailReminders(true);
+    try {
+      const res = await api.post('/warden/send-email-reminders');
+      const { totalStudents, emailsSent, failedEmails } = res.data;
+      
+      if (totalStudents === 0) {
+        setToast({
+          show: true,
+          message: 'No priority due alerts found',
+          type: 'success'
+        });
+      } else {
+        let message = `Total students: ${totalStudents} | Emails sent: ${emailsSent}`;
+        if (failedEmails > 0) {
+          message += ` | Failed: ${failedEmails}`;
+        }
+        setToast({
+          show: true,
+          message,
+          type: 'success'
+        });
+      }
+      setTimeout(() => setToast(null), 7000);
+    } catch (err: any) {
+      setToast({
+        show: true,
+        message: err.response?.data?.error || 'Failed to send email reminders',
+        type: 'error'
+      });
+      setTimeout(() => setToast(null), 5000);
+    } finally {
+      setSendingEmailReminders(false);
     }
   };
 
@@ -242,28 +281,52 @@ const WardenDashboard = () => {
                   </h2>
                   <p className="text-slate-400 text-sm font-medium mt-1">Here is your operational overview for today.</p>
                 </div>
-                <button
-                  onClick={sendReminders}
-                  disabled={sendingReminders}
-                  className={cn(
-                    "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
-                    sendingReminders
-                      ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-600/30"
-                  )}
-                >
-                  {sendingReminders ? (
-                    <>
-                      <Loader2 className="animate-spin" size={16} />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Bell size={16} />
-                      Send Reminder
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={sendReminders}
+                    disabled={sendingReminders}
+                    className={cn(
+                      "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
+                      sendingReminders
+                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                        : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-600/30"
+                    )}
+                  >
+                    {sendingReminders ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Bell size={16} />
+                        Send Reminder on WhatsApp
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={sendEmailReminders}
+                    disabled={sendingEmailReminders}
+                    className={cn(
+                      "flex items-center gap-3 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 shadow-lg",
+                      sendingEmailReminders
+                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                        : "bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-emerald-600/30"
+                    )}
+                  >
+                    {sendingEmailReminders ? (
+                      <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={16} />
+                        Send Reminder on Email
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {hostels.map((hostel) => (

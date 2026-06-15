@@ -261,6 +261,40 @@ app.post('/api/warden/send-reminders', authenticateToken, authorizeRoles('warden
   }
 });
 
+// Manual Email Reminders Endpoint (Warden Only)
+app.post('/api/warden/send-email-reminders', authenticateToken, authorizeRoles('warden', 'admin', 'owner'), async (req, res) => {
+  try {
+    const user = req.user;
+    
+    if (user.role !== 'warden') {
+      return res.status(403).json({ error: 'Only wardens can send reminders' });
+    }
+
+    const result = await whatsappMulti.sendPriorityDueEmailReminders(user.id);
+    
+    if (result.success) {
+      if (result.totalStudents === 0) {
+        res.status(200).json({
+          message: 'No priority due alerts found',
+          ...result
+        });
+      } else {
+        res.status(200).json({
+          message: 'Email reminders sent successfully',
+          ...result
+        });
+      }
+    } else {
+      res.status(400).json({
+        error: result.error || 'Failed to send email reminders'
+      });
+    }
+  } catch (err) {
+    console.error('[Email] Send reminders failed:', err);
+    res.status(500).json({ error: 'Failed to send email reminders' });
+  }
+});
+
 app.get('/', (req, res) => {
   res.json({ message: 'Hostel Management System API is running.' });
 });
