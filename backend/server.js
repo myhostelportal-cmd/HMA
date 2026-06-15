@@ -14,6 +14,7 @@ console.log('Puppeteer executable path:', executablePath);
 console.log('Exists:', fs.existsSync(executablePath));
 
 const whatsappMulti = require('./services/whatsapp-multi');
+const emailReminders = require('./services/email-reminders');
 const db = require('./config/db');
 
 const app = express();
@@ -271,7 +272,7 @@ app.post('/api/warden/send-email-reminders', authenticateToken, authorizeRoles('
     }
 
     // Wait for all emails to finish (but send them in parallel!)
-    const result = await whatsappMulti.sendPriorityDueEmailReminders(user.id);
+    const result = await emailReminders.sendPriorityDueEmailReminders(user.id);
     
     if (result.success) {
       if (result.totalStudents === 0) {
