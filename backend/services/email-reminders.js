@@ -25,7 +25,8 @@ async function createTransporter() {
     },
     connectionTimeout: 60000,
     greetingTimeout: 30000,
-    socketTimeout: 60000
+    socketTimeout: 60000,
+    family: 4 // Force IPv4 only
   });
 
   // Verify transporter connection
