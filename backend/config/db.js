@@ -10,7 +10,7 @@ if (process.env.DATABASE_URL) {
       : false,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 30000,
   });
 
   module.exports = {

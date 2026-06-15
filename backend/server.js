@@ -3,22 +3,15 @@ const cors = require('cors');
 const morgan = require('morgan');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 // Load environment variables first
 require('dotenv').config();
 
-// Set PUPPETEER_CACHE_DIR immediately at startup
-if (process.env.PUPPETEER_CACHE_DIR) {
-  console.log('========== PUPPETEER CACHE CONFIG ==========');
-  console.log('PUPPETEER_CACHE_DIR from env:', process.env.PUPPETEER_CACHE_DIR);
-  // Make sure the directory exists
-  if (!fs.existsSync(process.env.PUPPETEER_CACHE_DIR)) {
-    console.log('Creating PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
-    fs.mkdirSync(process.env.PUPPETEER_CACHE_DIR, { recursive: true });
-  }
-  console.log('===========================================\n');
-}
+// Simple Chrome diagnostics (official only)
+const puppeteer = require('puppeteer');
+const executablePath = puppeteer.executablePath();
+console.log('Puppeteer executable path:', executablePath);
+console.log('Exists:', fs.existsSync(executablePath));
 
 const whatsappMulti = require('./services/whatsapp-multi');
 const db = require('./config/db');
@@ -272,57 +265,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Hostel Management System API is running.' });
 });
 
-// Chrome installation verification
-async function ensureChromeInstalled() {
-  console.log('========== CHROME INSTALLATION CHECK ==========');
-  try {
-    const puppeteer = require('puppeteer');
-    
-    // Try to find Chrome
-    let exePath;
-    try {
-      exePath = await puppeteer.executablePath();
-      console.log('Found Chrome at:', exePath);
-      
-      if (fs.existsSync(exePath)) {
-        console.log('✅ Chrome executable exists at path');
-        console.log('========== CHROME CHECK COMPLETED ==========\n');
-        return;
-      } else {
-        console.log('❌ Chrome executable not found at path, installing...');
-      }
-    } catch (err) {
-      console.log('❌ puppeteer.executablePath() failed, installing Chrome...');
-    }
-    
-    // Install Chrome
-    console.log('🔄 Chrome installation started...');
-    execSync('npx puppeteer browsers install chrome', { 
-      stdio: 'inherit',
-      env: { ...process.env, PUPPETEER_CACHE_DIR: process.env.PUPPETEER_CACHE_DIR || '/opt/render/project/.chrome' }
-    });
-    console.log('✅ Chrome installation completed');
-    
-    // Verify again
-    exePath = await puppeteer.executablePath();
-    console.log('Chrome executable path after installation:', exePath);
-    
-    if (fs.existsSync(exePath)) {
-      console.log('✅ Chrome executable exists after installation');
-    } else {
-      console.log('❌ Chrome executable still not found after installation');
-    }
-    
-  } catch (err) {
-    console.error('❌ Error during Chrome installation check:', err);
-  }
-  console.log('========== CHROME CHECK COMPLETED ==========\n');
-}
-
 app.listen(port, async () => {
-  // Ensure Chrome is installed before proceeding
-  await ensureChromeInstalled();
-  
   console.log(`Server is running on port ${port}`);
   // Apply WhatsApp migration
   await applyWhatsAppMigration();
