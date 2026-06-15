@@ -466,57 +466,28 @@ async function sendPriorityDueEmailReminders(wardenId) {
     const hostelName = wardenResult.rows[0].hostel_name;
 
     // Get overdue fees (same query as WhatsApp reminders)
-    // First check if email column exists (optional)
-    let studentsResult;
-    try {
-      studentsResult = await db.query(
-        `SELECT 
-          s.student_id,
-          s.name, 
-          s.email,
-          s.phone,
-          s.room_id,
-          r.room_number, 
-          s.payment_model, 
-          SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) as total_due
-        FROM fees f
-        JOIN students s ON f.student_id = s.student_id
-        LEFT JOIN rooms r ON s.room_id = r.room_id
-        WHERE f.status != 'paid' 
-          AND f.due_date < CURRENT_DATE
-          AND f.hostel_id = $1
-        GROUP BY s.student_id, s.name, s.email, s.phone, s.room_id, r.room_number, s.payment_model
-        HAVING SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) > 0
-        ORDER BY total_due DESC`,
-        [hostelId]
-      );
-    } catch (err) {
-      // If email column doesn't exist, query without it
-      if (err.message.includes('column s.email does not exist')) {
-        studentsResult = await db.query(
-          `SELECT 
-            s.student_id,
-            s.name, 
-            s.phone,
-            s.room_id,
-            r.room_number, 
-            s.payment_model, 
-            SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) as total_due
-          FROM fees f
-          JOIN students s ON f.student_id = s.student_id
-          LEFT JOIN rooms r ON s.room_id = r.room_id
-          WHERE f.status != 'paid' 
-            AND f.due_date < CURRENT_DATE
-            AND f.hostel_id = $1
-          GROUP BY s.student_id, s.name, s.phone, s.room_id, r.room_number, s.payment_model
-          HAVING SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) > 0
-          ORDER BY total_due DESC`,
-          [hostelId]
-        );
-      } else {
-        throw err;
-      }
-    }
+    // Email is stored inside details JSON column
+    const studentsResult = await db.query(
+      `SELECT 
+        s.student_id,
+        s.name, 
+        s.details,
+        s.phone,
+        s.room_id,
+        r.room_number, 
+        s.payment_model, 
+        SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) as total_due
+      FROM fees f
+      JOIN students s ON f.student_id = s.student_id
+      LEFT JOIN rooms r ON s.room_id = r.room_id
+      WHERE f.status != 'paid' 
+        AND f.due_date < CURRENT_DATE
+        AND f.hostel_id = $1
+      GROUP BY s.student_id, s.name, s.details, s.phone, s.room_id, r.room_number, s.payment_model
+      HAVING SUM(f.amount + COALESCE(f.adjustment_amount, 0) - COALESCE(f.paid_amount, 0)) > 0
+      ORDER BY total_due DESC`,
+      [hostelId]
+    );
 
     let emailsSent = 0;
     let totalStudents = 0;
@@ -525,13 +496,16 @@ async function sendPriorityDueEmailReminders(wardenId) {
     for (const student of studentsResult.rows) {
       totalStudents++;
       
+      // Extract email from details JSON
+      const studentEmail = student.details?.email;
+      
       const message = `Hello ${student.name}, your total hostel pending due amount is ₹${parseFloat(student.total_due).toLocaleString()}. Please clear your pending dues as soon as possible to avoid further issues. – Hostel Management`;
 
       try {
-        if (student.email) {
+        if (studentEmail) {
           const mailOptions = {
             from: `"My Hostel" <${process.env.EMAIL_USER}>`,
-            to: student.email,
+            to: studentEmail,
             subject: `Urgent: Pending Dues Reminder - ${hostelName}`,
             html: `
               <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background-color: #f8fafc;">
@@ -563,7 +537,7 @@ async function sendPriorityDueEmailReminders(wardenId) {
 
           await transporter.sendMail(mailOptions);
           emailsSent++;
-          console.log(`[Email] Reminder sent to ${student.name} at ${student.email}`);
+          console.log(`[Email] Reminder sent to ${student.name} at ${studentEmail}`);
         } else {
           console.log(`[Email] No email found for ${student.name}, skipping`);
           failedEmails++;
