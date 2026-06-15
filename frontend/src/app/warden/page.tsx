@@ -281,51 +281,53 @@ const WardenDashboard = () => {
                   </h2>
                   <p className="text-slate-400 text-sm font-medium mt-1">Here is your operational overview for today.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* WhatsApp Reminder Button - Green Brand Color */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* WhatsApp Reminder Button - Compact & Branded Green */}
                   <button
                     onClick={sendReminders}
                     disabled={sendingReminders}
                     className={cn(
-                      "flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-xl",
+                      "flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 shadow-md border border-transparent",
                       sendingReminders
-                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                        : "bg-[#25D366] text-white hover:bg-[#128C7E] hover:shadow-[#25D366]/30 active:scale-95"
+                        ? "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200"
+                        : "bg-[#25D366] text-white hover:bg-[#1DB954] hover:shadow-[#25D366]/25 active:scale-95 border-[#128C7E]/20"
                     )}
                   >
                     {sendingReminders ? (
                       <>
-                        <Loader2 className="animate-spin" size={20} />
-                        Sending...
+                        <Loader2 className="animate-spin" size={18} />
+                        <span className="hidden md:inline">Sending...</span>
                       </>
                     ) : (
                       <>
-                        <MessageSquare size={20} />
-                        Send Reminder on WhatsApp
+                        <MessageSquare size={18} strokeWidth={2.5} />
+                        <span className="hidden md:inline">Send on WhatsApp</span>
+                        <span className="md:hidden">WhatsApp</span>
                       </>
                     )}
                   </button>
 
-                  {/* Email Reminder Button - Professional Blue */}
+                  {/* Email Reminder Button - Compact Professional Blue */}
                   <button
                     onClick={sendEmailReminders}
                     disabled={sendingEmailReminders}
                     className={cn(
-                      "flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-xl",
+                      "flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 shadow-md border border-transparent",
                       sendingEmailReminders
-                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-600/30 active:scale-95"
+                        ? "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200"
+                        : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-600/25 active:scale-95 border-blue-700/20"
                     )}
                   >
                     {sendingEmailReminders ? (
                       <>
-                        <Loader2 className="animate-spin" size={20} />
-                        Sending...
+                        <Loader2 className="animate-spin" size={18} />
+                        <span className="hidden md:inline">Sending...</span>
                       </>
                     ) : (
                       <>
-                        <Mail size={20} />
-                        Send Reminder on Email
+                        <Mail size={18} strokeWidth={2.5} />
+                        <span className="hidden md:inline">Send on Email</span>
+                        <span className="md:hidden">Email</span>
                       </>
                     )}
                   </button>
