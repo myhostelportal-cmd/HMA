@@ -270,22 +270,29 @@ app.post('/api/warden/send-email-reminders', authenticateToken, authorizeRoles('
       return res.status(403).json({ error: 'Only wardens can send reminders' });
     }
 
-    // Respond immediately! Then send emails in background!
-    res.status(200).json({
-      message: 'Email reminders are being sent in the background!',
-      status: 'processing'
-    });
-
-    // Now send the emails in the background (don't await this!)
-    whatsappMulti.sendPriorityDueEmailReminders(user.id)
-      .then((result) => {
-        console.log('[Email] Background email sending complete:', result);
-      })
-      .catch((err) => {
-        console.error('[Email] Background email sending failed:', err);
+    // Wait for all emails to finish (but send them in parallel!)
+    const result = await whatsappMulti.sendPriorityDueEmailReminders(user.id);
+    
+    if (result.success) {
+      if (result.totalStudents === 0) {
+        res.status(200).json({
+          message: 'No priority due alerts found',
+          ...result
+        });
+      } else {
+        res.status(200).json({
+          message: 'Email reminders sent successfully',
+          ...result
+        });
+      }
+    } else {
+      res.status(400).json({
+        error: result.error || 'Failed to send email reminders'
       });
+    }
   } catch (err) {
     console.error('[Email] Send reminders failed:', err);
+    res.status(500).json({ error: 'Failed to send email reminders' });
   }
 });
 

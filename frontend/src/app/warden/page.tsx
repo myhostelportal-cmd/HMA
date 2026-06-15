@@ -99,18 +99,30 @@ const WardenDashboard = () => {
     setSendingEmailReminders(true);
     try {
       const res = await api.post('/warden/send-email-reminders');
+      const { totalStudents, emailsSent, failedEmails } = res.data;
       
-      // Success immediately since we're sending in background!
-      setToast({
-        show: true,
-        message: 'Email reminders are being sent in the background! Check server logs for details.',
-        type: 'success'
-      });
+      if (totalStudents === 0) {
+        setToast({
+          show: true,
+          message: 'No priority due alerts found',
+          type: 'success'
+        });
+      } else {
+        let message = `Total students: ${totalStudents} | Emails sent: ${emailsSent}`;
+        if (failedEmails > 0) {
+          message += ` | Failed: ${failedEmails}`;
+        }
+        setToast({
+          show: true,
+          message,
+          type: 'success'
+        });
+      }
       setTimeout(() => setToast(null), 7000);
     } catch (err: any) {
       setToast({
         show: true,
-        message: err.response?.data?.error || 'Failed to start sending email reminders',
+        message: err.response?.data?.error || 'Failed to send email reminders',
         type: 'error'
       });
       setTimeout(() => setToast(null), 5000);
