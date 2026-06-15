@@ -93,6 +93,16 @@ async function initWardenSession(wardenId, forceReset = false) {
     status: 'qr_pending'
   });
 
+  // Determine Chrome executable path (works locally and on Render)
+  let executablePath;
+  const puppeteer = require('puppeteer');
+  try {
+    executablePath = puppeteer.executablePath();
+  } catch (e) {
+    // Fallback to known Render path
+    executablePath = '/opt/render/project/.chrome/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
+  }
+  
   // Initialize WhatsApp client
   const client = new Client({
     authStrategy: new LocalAuth({
@@ -100,6 +110,7 @@ async function initWardenSession(wardenId, forceReset = false) {
     }),
     puppeteer: {
       headless: true,
+      executablePath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
