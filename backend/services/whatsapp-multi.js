@@ -93,47 +93,22 @@ async function initWardenSession(wardenId, forceReset = false) {
     status: 'qr_pending'
   });
 
-  // Determine Chrome executable path (works locally and on Render)
-  let executablePath;
-  try {
-    const puppeteer = require('puppeteer');
-    executablePath = await puppeteer.executablePath();
-  } catch (e) {
-    console.log('[WhatsApp] puppeteer.executablePath() failed, trying Render-specific path');
-    // On Render, find Chrome in /opt/render/project/.chrome
-    const baseDir = '/opt/render/project/.chrome/chrome';
-    if (fs.existsSync(baseDir)) {
-      const dirs = fs.readdirSync(baseDir);
-      for (const dir of dirs) {
-        const possiblePath = path.join(baseDir, dir, 'chrome-linux64', 'chrome');
-        if (fs.existsSync(possiblePath)) {
-          executablePath = possiblePath;
-          console.log('[WhatsApp] Found Chrome at Render path:', executablePath);
-          break;
-        }
-      }
-    }
-  }
-  
-  // Log the final Chrome path for debugging
-  console.log('[WhatsApp] Using Chrome executable path:', executablePath);
-  if (executablePath && !fs.existsSync(executablePath)) {
-    console.error('[WhatsApp] Chrome executable does NOT exist at path:', executablePath);
-  }
-
-  // ==================== ADD DETAILED LOGGING HERE ====================
+  // ==================== CHROME DIAGNOSTICS START ====================
   const puppeteer = require('puppeteer');
   
-  console.log('\n[WhatsApp DIAGNOSTICS] =======================================');
-  console.log('1. process.env.PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
-  console.log('2. process.env.PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH);
+  console.log('\n========== CHROME DIAGNOSTICS ==========');
   
-  const puppeteerExePath = await puppeteer.executablePath();
-  console.log('3. await puppeteer.executablePath():', puppeteerExePath);
-  
-  const puppeteerExeExists = fs.existsSync(puppeteerExePath);
-  console.log('4. fs.existsSync(await puppeteer.executablePath()):', puppeteerExeExists);
-  
+  try {
+    const exePath = await puppeteer.executablePath();
+    
+    console.log('PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
+    console.log('PUPPETEER_EXECUTABLE_PATH:', process.env.PUPPETEER_EXECUTABLE_PATH);
+    console.log('puppeteer.executablePath():', exePath);
+    console.log('Executable Exists:', fs.existsSync(exePath));
+  } catch (err) {
+    console.error('Error resolving executable path:', err);
+  }
+
   // Recursively scan and print folders
   function scanDirectory(dir, depth = 0) {
     if (!fs.existsSync(dir)) {
@@ -157,23 +132,65 @@ async function initWardenSession(wardenId, forceReset = false) {
       console.log('   '.repeat(depth) + `[ERROR] Cannot scan ${dir}:`, err.message);
     }
   }
-  
-  console.log('\n5. Scanning /opt/render/project/.chrome:');
+
+  // Scan all possible Chrome locations
+  console.log('\nScanning /opt/render/project/.chrome:');
   scanDirectory('/opt/render/project/.chrome');
   
-  console.log('\n6. Scanning /opt/render/.cache/puppeteer:');
-  scanDirectory('/opt/render/.cache/puppeteer');
-  console.log('[WhatsApp DIAGNOSTICS] =======================================\n');
-  // ==================== END OF DETAILED LOGGING ====================
+  console.log('\nScanning /opt/render/.cache:');
+  scanDirectory('/opt/render/.cache');
   
-  // Initialize WhatsApp client
+  console.log('\nScanning /opt/render:');
+  scanDirectory('/opt/render');
+
+  // Find Chrome binaries recursively
+  const foundChromePaths = [];
+  
+  function findChromeBinaries(dir) {
+    if (!fs.existsSync(dir)) {
+      return;
+    }
+    
+    try {
+      const files = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const file of files) {
+        const fullPath = path.join(dir, file.name);
+        
+        if (file.isDirectory()) {
+          findChromeBinaries(fullPath);
+        } else {
+          const fileName = file.name.toLowerCase();
+          if (fileName.includes('chrome') || fileName.includes('chromium')) {
+            foundChromePaths.push(fullPath);
+          }
+        }
+      }
+    } catch (err) {
+      // Ignore errors for certain directories
+    }
+  }
+
+  console.log('\nSearching for Chrome binaries in /opt/render:');
+  findChromeBinaries('/opt/render');
+  
+  if (foundChromePaths.length > 0) {
+    console.log('\nFOUND CHROME:');
+    foundChromePaths.forEach(path => console.log(path));
+  } else {
+    console.log('\nNO CHROME BINARIES FOUND in /opt/render');
+  }
+  
+  console.log('========== END CHROME DIAGNOSTICS ==========\n');
+  // ==================== CHROME DIAGNOSTICS END ====================
+  
+  // Initialize WhatsApp client (without forced executablePath)
   const client = new Client({
     authStrategy: new LocalAuth({
       dataPath: sessionDir
     }),
     puppeteer: {
       headless: true,
-      executablePath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
