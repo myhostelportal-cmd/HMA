@@ -4,7 +4,22 @@ const morgan = require('morgan');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+
+// Load environment variables first
 require('dotenv').config();
+
+// Set PUPPETEER_CACHE_DIR immediately at startup
+if (process.env.PUPPETEER_CACHE_DIR) {
+  console.log('========== PUPPETEER CACHE CONFIG ==========');
+  console.log('PUPPETEER_CACHE_DIR from env:', process.env.PUPPETEER_CACHE_DIR);
+  // Make sure the directory exists
+  if (!fs.existsSync(process.env.PUPPETEER_CACHE_DIR)) {
+    console.log('Creating PUPPETEER_CACHE_DIR:', process.env.PUPPETEER_CACHE_DIR);
+    fs.mkdirSync(process.env.PUPPETEER_CACHE_DIR, { recursive: true });
+  }
+  console.log('===========================================\n');
+}
+
 const whatsappMulti = require('./services/whatsapp-multi');
 const db = require('./config/db');
 
