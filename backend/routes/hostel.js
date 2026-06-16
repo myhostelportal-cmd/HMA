@@ -1626,7 +1626,10 @@ router.delete('/hostel/:hostelId', authenticateToken, authorizeRoles('admin'), a
       }
     };
 
-    // First, set any wardens that reference this hostel to NULL!
+    // First, delete any warden_whatsapp_sessions for this hostel!
+    await safeDelete('DELETE FROM warden_whatsapp_sessions WHERE hostel_id = $1', [hostelId]);
+    
+    // Also set wardens.hostel_id to NULL!
     await db.query('UPDATE wardens SET hostel_id = NULL WHERE hostel_id = $1', [hostelId]);
     console.log(`✅ Updated wardens with hostel_id = ${hostelId} to NULL`);
 
@@ -1636,10 +1639,12 @@ router.delete('/hostel/:hostelId', authenticateToken, authorizeRoles('admin'), a
     await safeDelete('DELETE FROM receipt_logs WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
     await safeDelete('DELETE FROM payment_corrections WHERE original_payment_id IN (SELECT payment_id FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1))', [hostelId]);
     await safeDelete('DELETE FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM payments WHERE hostel_id = $1', [hostelId]); // Also delete payments via direct hostel_id
     await safeDelete('DELETE FROM fees WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM fee_ledger WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM security_deposits WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM student_attendance WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM attendance_submissions WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM student_exit_records WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
     await safeDelete('DELETE FROM student_documents WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
     await safeDelete('DELETE FROM fee_reminders WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
@@ -1651,7 +1656,6 @@ router.delete('/hostel/:hostelId', authenticateToken, authorizeRoles('admin'), a
     await safeDelete('DELETE FROM hostel_documents WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM warden_assignment_history WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM expenses WHERE hostel_id = $1', [hostelId]);
-    await safeDelete('DELETE FROM attendance_submissions WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM daily_financial_summary WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM monthly_analytics WHERE hostel_id = $1', [hostelId]);
     await safeDelete('DELETE FROM occupancy_analytics WHERE hostel_id = $1', [hostelId]);
