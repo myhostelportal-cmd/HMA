@@ -12,6 +12,8 @@ const AdminHostels = () => {
   const [loading, setLoading] = useState(true);
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; id: number | null }>({ show: false, id: null });
   const [deleting, setDeleting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [deletedHostelName, setDeletedHostelName] = useState('');
 
   const fetchHostels = async () => {
     try {
@@ -32,9 +34,13 @@ const AdminHostels = () => {
     if (!deleteModal.id) return;
     setDeleting(true);
     try {
+      const hostel = hostels.find(h => h.hostel_id === deleteModal.id);
       await api.delete(`hostels/hostel/${deleteModal.id}`);
       await fetchHostels();
       setDeleteModal({ show: false, id: null });
+      setDeletedHostelName(hostel?.hostel_name || 'Hostel');
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 4000);
     } catch (err) {
       alert('Error deleting hostel. Please check console for details.');
       console.error(err);
@@ -133,6 +139,27 @@ const AdminHostels = () => {
           </div>
         )}
       </main>
+
+      {/* Success Toast */}
+      {showSuccess && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl shadow-xl animate-in slide-in-from-right fade-in duration-500">
+          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-emerald-900 text-sm leading-none">Hostel Deleted Successfully</p>
+            <p className="text-emerald-700 font-medium text-xs mt-1.5">{deletedHostelName} and all associated data have been permanently removed.</p>
+          </div>
+          <button 
+            onClick={() => setShowSuccess(false)} 
+            className="ml-2 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex-shrink-0"
+          >
+            <X size={16} className="text-emerald-600" />
+          </button>
+        </div>
+      )}
 
       {/* Custom Delete Confirmation Modal */}
       {deleteModal.show && (
