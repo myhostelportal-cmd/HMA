@@ -1614,14 +1614,33 @@ router.delete('/hostel/:hostelId', authenticateToken, authorizeRoles('admin'), a
     const hostel = await db.query('SELECT hostel_name FROM hostels WHERE hostel_id = $1', [hostelId]);
     if (hostel.rows.length === 0) return res.status(404).json({ error: 'Hostel not found' });
 
-    // Database is now configured with ON DELETE CASCADE.
-    // Deleting the hostel will automatically remove:
-    // Students, Rooms, Fees, Payments, Ledger, Deposits, Expenses, Complaints, and Analytics.
+    await db.query('BEGIN');
+
+    // Delete in reverse order of dependencies
+    await db.query('DELETE FROM daily_financial_summary WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM monthly_analytics WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM occupancy_analytics WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM fee_collection_stats WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM expenses WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM complaints WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM payment_corrections WHERE original_payment_id IN (SELECT payment_id FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1))', [hostelId]);
+    await db.query('DELETE FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1)', [hostelId]);
+    await db.query('DELETE FROM security_deposits WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM fee_ledger WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM fees WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM student_attendance WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await db.query('DELETE FROM attendance_submissions WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM student_exit_records WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await db.query('DELETE FROM students WHERE hostel_id = $1', [hostelId]);
+    await db.query('DELETE FROM rooms WHERE hostel_id = $1', [hostelId]);
     await db.query('DELETE FROM hostels WHERE hostel_id = $1', [hostelId]);
 
-    await logAction('admin', req.user.id, `Deleted hostel: ${hostel.rows[0].hostel_name} (Auto-cascaded cleanup)`, 'hostel');
+    await db.query('COMMIT');
+
+    await logAction('admin', req.user.id, `Deleted hostel: ${hostel.rows[0].hostel_name} (Manual cleanup of all data)`, 'hostel');
     res.json({ message: 'Hostel and all associated data deleted successfully' });
   } catch (err) {
+    await db.query('ROLLBACK');
     console.error('Delete hostel error:', err);
     res.status(500).json({ error: 'Server error during hostel deletion. Check database constraints.' });
   }
