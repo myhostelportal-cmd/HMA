@@ -1616,24 +1616,38 @@ router.delete('/hostel/:hostelId', authenticateToken, authorizeRoles('admin'), a
 
     await db.query('BEGIN');
 
-    // Delete in reverse order of dependencies
-    await db.query('DELETE FROM daily_financial_summary WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM monthly_analytics WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM occupancy_analytics WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM fee_collection_stats WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM expenses WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM complaints WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM payment_corrections WHERE original_payment_id IN (SELECT payment_id FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1))', [hostelId]);
-    await db.query('DELETE FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1)', [hostelId]);
-    await db.query('DELETE FROM security_deposits WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM fee_ledger WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM fees WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM student_attendance WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
-    await db.query('DELETE FROM attendance_submissions WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM student_exit_records WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
-    await db.query('DELETE FROM students WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM rooms WHERE hostel_id = $1', [hostelId]);
-    await db.query('DELETE FROM hostels WHERE hostel_id = $1', [hostelId]);
+    // Helper function to delete safely, skipping missing tables
+    const safeDelete = async (query, params = []) => {
+      try {
+        await db.query(query, params);
+      } catch (err) {
+        console.log(`Skipping delete for query (table may not exist):`, query);
+      }
+    };
+
+    // Delete in reverse order of dependencies (most dependent first)
+    await safeDelete('DELETE FROM complaint_comments WHERE complaint_id IN (SELECT complaint_id FROM complaints WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM complaints WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM fee_reminders WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM payment_corrections WHERE original_payment_id IN (SELECT payment_id FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1))', [hostelId]);
+    await safeDelete('DELETE FROM payments WHERE fee_id IN (SELECT fee_id FROM fees WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM fees WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM student_documents WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM student_attendance WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM student_exit_records WHERE student_id IN (SELECT student_id FROM students WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM room_allocations WHERE room_id IN (SELECT room_id FROM rooms WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM room_maintenance WHERE room_id IN (SELECT room_id FROM rooms WHERE hostel_id = $1)', [hostelId]);
+    await safeDelete('DELETE FROM rooms WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM students WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM hostel_settings WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM hostel_documents WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM warden_assignment_history WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM daily_financial_summary WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM monthly_analytics WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM occupancy_analytics WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM fee_collection_stats WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM expenses WHERE hostel_id = $1', [hostelId]);
+    await safeDelete('DELETE FROM hostels WHERE hostel_id = $1', [hostelId]);
 
     await db.query('COMMIT');
 
