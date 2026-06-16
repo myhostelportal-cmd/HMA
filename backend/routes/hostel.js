@@ -1626,6 +1626,10 @@ router.delete('/hostel/:hostelId', authenticateToken, authorizeRoles('admin'), a
       }
     };
 
+    // First, set any wardens that reference this hostel to NULL!
+    await db.query('UPDATE wardens SET hostel_id = NULL WHERE hostel_id = $1', [hostelId]);
+    console.log(`✅ Updated wardens with hostel_id = ${hostelId} to NULL`);
+
     // Delete in reverse order of dependencies (most dependent first)
     await safeDelete('DELETE FROM complaint_comments WHERE complaint_id IN (SELECT complaint_id FROM complaints WHERE hostel_id = $1)', [hostelId]);
     await safeDelete('DELETE FROM complaints WHERE hostel_id = $1', [hostelId]);
